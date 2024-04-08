@@ -1,0 +1,12 @@
+.venv
+.vscode/*
+**/__pycache__/*
+configs/custom_llm_config.yaml
+configs\custom_llm_config_v2.yaml
+messages.db
+*.log
+dxg_debug/*
+data/*
+trials/*
+*.bak
+.data
