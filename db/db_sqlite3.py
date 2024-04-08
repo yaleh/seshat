@@ -27,7 +27,7 @@ class DatabaseManager:
 
     def get_messages(self, table_name):
         c = self.conn.cursor()
-        c.execute(f"SELECT * FROM {table_name}")
+        c.execute(f"SELECT * FROM {table_name} ORDER BY timestamp DESC")
         messages = c.fetchall()
         return [message[1][:self.max_message_length] if message[1]!=None else '' for message in messages]
 
