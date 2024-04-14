@@ -41,6 +41,7 @@ zipp = "1.0.0"
 chardet = "^5.2.0"
 
 [tool.poetry.dev-dependencies]
+ipykernel = "^6.29.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

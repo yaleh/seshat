@@ -121,7 +121,7 @@ class BatchUI:
                                 choices=self.config.llm.model_services[self.default_model_service].models,
                                 value=self.model_name,
                                 interactive=True,
-                                allow_custom_value=False
+                                allow_custom_value=True
                             )
                         self.llm_other_option_checkbox = gr.Checkbox(value=False,
                                                                     label="Other LLM Model Options"
@@ -201,7 +201,8 @@ class BatchUI:
                     with gr.Group():
                         with gr.Row():
                             self.send_call = gr.Button(value="Send(call)", visible=False)
-                            self.clear = gr.ClearButton([self.user_msg, self.system_msg, self.chatbot])
+                            self.clear_output = gr.ClearButton([self.chatbot], value="Clear Output")
+                            self.clear_all = gr.ClearButton([self.user_msg, self.system_msg, self.chatbot], value="Clear All")
                     
             # Bind events
             self.bind_events(table_block)

@@ -10,19 +10,17 @@ class OpenAIConfig(BaseModel):
         extra = "allow"
 
 class AzureOpenAIConfig(BaseModel):
-    openai_api_type: str
-    openai_api_version: str
     openai_api_base: str
     openai_api_key: str
-    temperature: int
-    max_retries: int
-    request_timeout: int
-    max_tokens: int = None
+
+    class Config:
+        extra = "allow"
 
 class ReplicateConfig(BaseModel):
     REPLICATE_API_TOKEN: str
-    temperature: int
-    max_tokens: int = None
+
+    class Config:
+        extra = "allow"
 
 class HuggingFaceConfig(BaseModel):
     huggingfacehub_api_token: str
@@ -41,5 +39,20 @@ class LLMConfig(BaseModel):
     default_rr_model_name: str
     model_services: Dict[str, ModelService]
 
+class MetaPromptConfig(BaseConfig):
+    class Config:
+        extra = "allow"
+
+class ServerConfig(BaseConfig):
+    message_db: str
+    host: str
+    port: int
+    share: bool
+
+    class Config:
+        extra = "allow"
+
 class AppConfig(BaseConfig):
     llm: LLMConfig
+    meta_prompt: MetaPromptConfig
+    server: ServerConfig
