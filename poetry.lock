@@ -390,6 +390,14 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "et-xmlfile"
+version = "1.1.0"
+description = "An implementation of lxml.xmlfile for the standard library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -1196,6 +1204,17 @@ typing-extensions = ">=4.7,<5"
 
 [package.extras]
 datalib = ["numpy (>=1)", "pandas-stubs (>=1.1.0.11)", "pandas (>=1.2.3)"]
+
+[[package]]
+name = "openpyxl"
+version = "3.1.2"
+description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+et-xmlfile = "*"
 
 [[package]]
 name = "ordereddict"
@@ -2011,7 +2030,7 @@ testing = ["pathlib2", "contextlib2", "unittest2"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "7166aaf35dbcbacf0c2d1717027bd7459b6ff692656339046f0fc5f1903cbbe3"
+content-hash = "385da541edc6f12d74f1de632fc28eae9bf32acf52ac66ea71280ee29d27961c"
 
 [metadata.files]
 aiofiles = []
@@ -2049,6 +2068,7 @@ decorator = []
 distro = []
 dl = []
 docutils = []
+et-xmlfile = []
 exceptiongroup = []
 executing = []
 fastapi = []
@@ -2102,6 +2122,7 @@ mypy-extensions = []
 nest-asyncio = []
 numpy = []
 openai = []
+openpyxl = []
 ordereddict = []
 orjson = []
 packaging = []

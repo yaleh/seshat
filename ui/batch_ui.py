@@ -179,21 +179,20 @@ class BatchUI:
                             interactive=True
                         )
                         with gr.Row():
+                            self.table_rows = gr.Number(label="Table Rows", value=0, precision=0, 
+                                                        interactive=False)
+                            self.refresh_table_rows = gr.Button(value="Refresh Table Rows")
+                        with gr.Row():
                             self.table_file = gr.File(
                                 label="Upload file(*.csv/xls/xlsx)",
                                 type="file",
                                 file_types=["csv", "xls", "xlsx"],
                                 height=120
                             )
-                            self.batch_step_slider = gr.Slider(
-                                minimum=0,
-                                maximum=0,
-                                step=1,
-                                value=0,
-                                interactive=True,
-                                label="Batch Length",
-                                scale=2
-                            )
+                            with gr.Column():
+                                self.batch_start = gr.Number(label="Batch Start", value=0, precision=0)
+                                self.batch_end = gr.Number(label="Batch End (excluded)", value=0, precision=0)
+                                self.batch_size = gr.Number(label="Batch Size", value=10, precision=0)
                         with gr.Row():
                             self.batch_send_button = gr.Button(value="Batch Send")
                             self.cancel_batch_button = gr.Button(value="Cancel Batch Send")
@@ -269,13 +268,19 @@ class BatchUI:
         self.table_file.upload(
             self.upload_table,
             [self.table_file],
-            [self.table_dataframe_input, self.batch_step_slider]
+            [self.table_dataframe_input, self.batch_start, self.batch_end, self.batch_size]
+        )
+
+        self.refresh_table_rows.click(
+            self.get_table_rows,
+            [self.table_dataframe_input],
+            [self.table_rows]
         )
 
         batch_send_env = self.batch_send_button.click(
             self.send_batch_func,
             [self.system_msg_textbox, self.user_msg_textbox, self.chatbot,
-             self.table_dataframe_input, self.batch_step_slider],
+             self.table_dataframe_input, self.batch_start, self.batch_end, self.batch_size],
             [self.chatbot, self.table_dataframe_result]
         )
 
@@ -285,7 +290,7 @@ class BatchUI:
         )
         self.merge_table_button.click(
             fn=self.merge_table,
-            inputs=[self.table_dataframe_input, self.table_dataframe_output],
+            inputs=[self.table_dataframe_input, self.table_dataframe_output, self.batch_start, self.batch_end],
             outputs=[self.table_dataframe_merged]
         )
         self.download_df_res.click(
@@ -299,12 +304,14 @@ class BatchUI:
             outputs=[self.download_file_merged]
         )
 
-    def merge_table(self, table_input, table_output):
+    def merge_table(self, table_input, table_output, batch_start, batch_end):
         try:
-            refined_table_input = table_input.loc[table_input['Skip']=='', :]
+            selected_table = table_input.iloc[int(batch_start):int(batch_end), :]
+            refined_table_input = selected_table.loc[table_input['Skip']=='', :]
+            refined_table_input.reset_index(drop=True, inplace=True)
         except Exception as e:
             raise gr.Error('请确保已上传 `Table Dataframe for Input`: %s' % e)
-        return pd.concat([refined_table_input, table_output], axis=1)
+        return pd.concat([refined_table_input, table_output], axis=1, ignore_index=True)
 
     def update_llm_config(self, llm_service, llm_model_name):
         model_service = self.config.llm.model_services[llm_service]
@@ -412,17 +419,23 @@ class BatchUI:
             raise gr.Error(f"send_call_func-err:{e}")
         return gr.Chatbot(value=chat_history)
 
-    def send_batch_func(self, system_prompt, user_prompt, chat_history, table, batch_len):
+    def send_batch_func(self, system_prompt, user_prompt, chat_history, table,
+                        batch_start, batch_end, batch_len, progress=gr.Progress()):
         gr.Info(f'model service: {self.default_model_service}')
         gr.Info(f'model name: {self.model_name}')
 
         chat_prompt = self.create_chat_prompt(system_prompt, user_prompt, chat_history)
         chat_chain = self.create_chat_chain(chat_prompt)
 
-        table_refined = table.loc[table['Skip']=='', :]
+        selected_table = table.iloc[int(batch_start):int(batch_end), :]
+        table_refined = selected_table.loc[selected_table['Skip']=='', :] \
+            if 'Skip' in selected_table.columns else selected_table
 
         table_output = table_refined.copy()
         table_output.insert(table_output.shape[-1], 'Output', 0)
+
+        progress((0, len(table_refined)), desc="Starting...")
+        
         # 根据batch step，对table进行切片处理
         for i in range(0,len(table_refined), batch_len):
             table_step = table_refined.iloc[i:i+batch_len,:]
@@ -439,9 +452,10 @@ class BatchUI:
                 Human_list = [item.messages[1].content for item in Human_list]
                 chat_history += list(zip(Human_list, llmbot_res))
                 table_output.iloc[i:i+batch_len,table_output.shape[-1]-1]=llmbot_res
-                gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(table) else len(table)}/{len(table)}")
+                gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(selected_table) else len(selected_table)}/{len(selected_table)}")
+                progress((i+batch_len, len(table_refined)), desc="Processing...")
             except Exception as e:
-                raise gr.Error(f'send_batch_func-err:{e}')
+                raise gr.Error(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
         return gr.Chatbot(value=chat_history), table_output
 
     def cancel_batch_send(self):
@@ -491,7 +505,10 @@ class BatchUI:
         except Exception as e:
             raise gr.Error(e)
         df = TableParser.add_skip_column(df)
-        return df, gr.Slider(minimum=0, maximum=len(df), step=1, value=len(df))
+        return df, 0, len(df), len(df)
+
+    def get_table_rows(self, table):
+        return table.shape[0]
 
     def save_dataframe(self, file_type, df):
         if file_type == 'csv':
