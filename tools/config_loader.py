@@ -2,6 +2,7 @@ from typing import Dict, Union
 
 from confz import BaseConfig
 from pydantic import BaseModel
+from typing import Optional
 
 class OpenAIConfig(BaseModel):
     openai_api_key: str
@@ -37,7 +38,13 @@ class ModelService(BaseModel):
 class LLMConfig(BaseModel):
     default_model_service: str
     default_rr_model_name: str
-    model_services: Dict[str, ModelService]
+    llm_services: Dict[str, ModelService]
+
+class EmbeddingConfig(BaseModel):
+    type: str
+
+    class Config:
+        extra = "allow"
 
 class MetaPromptConfig(BaseConfig):
     class Config:
@@ -56,3 +63,4 @@ class AppConfig(BaseConfig):
     llm: LLMConfig
     meta_prompt: MetaPromptConfig
     server: ServerConfig
+    embedding: Optional[dict[str, EmbeddingConfig]]

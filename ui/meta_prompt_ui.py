@@ -6,29 +6,29 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # from prompts.prmmpt_prompts import *
 # from components.chatbot import ChatbotFactory
-from components.lcel import ModelFactory
+from components.lcel import LLMModelFactory
 
 class MetaPromptUI:
     def __init__(self, config):
         self.config = config
 
-        self.chatbot_factory = ModelFactory()
+        self.chatbot_factory = LLMModelFactory()
 
         self.model_service_list = self.config.llm.default_model_service
-        self.model_factory = ModelFactory()
+        self.model_factory = LLMModelFactory()
 
         # generating llm
         self.generating_model_service = self.config.meta_prompt.default_meta_model_service
-        self.generating_model_type = self.config.llm.model_services[self.generating_model_service].type
-        self.generating_model_args = self.config.llm.model_services[self.generating_model_service].args.dict()
+        self.generating_model_type = self.config.llm.llm_services[self.generating_model_service].type
+        self.generating_model_args = self.config.llm.llm_services[self.generating_model_service].args.dict()
         self.generating_model_name = self.config.meta_prompt.default_meta_model_name
     
         self.generating_show_other_options = False
 
         # testing llm
         self.testing_model_service = self.config.meta_prompt.default_target_model_service
-        self.testing_model_type = self.config.llm.model_services[self.testing_model_service].type
-        self.testing_model_args = self.config.llm.model_services[self.testing_model_service].args.dict()
+        self.testing_model_type = self.config.llm.llm_services[self.testing_model_service].type
+        self.testing_model_args = self.config.llm.llm_services[self.testing_model_service].args.dict()
         self.testing_model_name = self.config.meta_prompt.default_target_model_name
     
         self.testing_show_other_options = False
@@ -145,14 +145,14 @@ class MetaPromptUI:
                     with gr.Row():
                         self.generating_llm_service_dropdown = gr.Dropdown(
                             label='Generating LLM Service',
-                            choices=self.config.llm.model_services.keys(),
+                            choices=self.config.llm.llm_services.keys(),
                             value=self.generating_model_service,
                             interactive=True,
                             allow_custom_value=False
                         )
                         self.generating_llm_model_name_dropdown = gr.Dropdown(
                             label="Generating LLM Model Name",
-                            choices=self.config.llm.model_services[self.generating_model_service].models,
+                            choices=self.config.llm.llm_services[self.generating_model_service].models,
                             value=self.generating_model_name,
                             interactive=True,
                             allow_custom_value=False
@@ -264,14 +264,14 @@ class MetaPromptUI:
                     with gr.Row():
                         self.testing_llm_service_dropdown = gr.Dropdown(
                             label='Testing LLM Service',
-                            choices=self.config.llm.model_services.keys(),
+                            choices=self.config.llm.llm_services.keys(),
                             value=self.testing_model_service,
                             interactive=True,
                             allow_custom_value=False
                         )
                         self.testing_llm_model_name_dropdown = gr.Dropdown(
                             label="Testing LLM Model Name",
-                            choices=self.config.llm.model_services[self.testing_model_service].models,
+                            choices=self.config.llm.llm_services[self.testing_model_service].models,
                             value=self.testing_model_name,
                             interactive=True,
                             allow_custom_value=False
@@ -446,7 +446,7 @@ class MetaPromptUI:
                                     request_timeout,
                                     max_retries):
         
-        model_service = self.config.llm.model_services[llm_service]
+        model_service = self.config.llm.llm_services[llm_service]
         self.generating_model_type = model_service.type
         self.generating_model_args = model_service.args.dict()
         self.generating_model_name = model_name
@@ -468,7 +468,7 @@ class MetaPromptUI:
                                     max_tokens,
                                     request_timeout,
                                     max_retries):
-        model_service = self.config.llm.model_services[llm_service]
+        model_service = self.config.llm.llm_services[llm_service]
         self.testing_model_type = model_service.type
         self.testing_model_args = model_service.args.dict()
         self.testing_model_name = model_name
@@ -657,7 +657,7 @@ class MetaPromptUI:
     def update_llm_model_name_dropdown(self, cur_llm_service):
         # self.model_name_list = self.config_loader.get_model_name_list(cur_llm_service)
         # return gr.Dropdown(choices=self.model_name_list)
-        return gr.Dropdown(choices=self.config.llm.model_services[cur_llm_service].models)
+        return gr.Dropdown(choices=self.config.llm.llm_services[cur_llm_service].models)
 
     def update_enable_other_user_prompts(self, new_value):
         self.enable_other_user_prompts = new_value

@@ -4,16 +4,17 @@ import gradio as gr
 from confz import FileSource, CLArgSource
 
 from tools.config_loader import AppConfig
-from ui import BatchUI, MetaPromptUI
+from ui import BatchUI, MetaPromptUI, EmbeddingUI
 
 class ChatbotApp:
     def __init__(self, config=None):
         self.batch_ui = BatchUI(config)
+        self.embedding_ui = EmbeddingUI(config)
         self.meta_ui = MetaPromptUI(config)
 
         self.ui = gr.TabbedInterface(
-            interface_list=[self.batch_ui.ui, self.meta_ui.ui],
-            tab_names=['Batch', 'Meta Prompt'],
+            interface_list=[self.batch_ui.ui, self.embedding_ui.ui, self.meta_ui.ui],
+            tab_names=['Batch', 'Embedding', 'Meta Prompt'],
             title='Seshat'
         )
 

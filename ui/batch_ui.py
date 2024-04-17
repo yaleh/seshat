@@ -3,7 +3,7 @@ import pandas as pd
 import tempfile
 
 from db.db_sqlite3 import DatabaseManager
-from components.lcel import ModelFactory
+from components.lcel import LLMModelFactory
 from langchain.prompts import HumanMessagePromptTemplate, SystemMessagePromptTemplate
 from langchain.schema import AIMessage, HumanMessage
 from langchain.schema.output_parser import StrOutputParser
@@ -19,16 +19,16 @@ class BatchUI:
 
         self.config = config
         self.default_model_service = self.config.llm.default_model_service
-        self.model_type = self.config.llm.model_services[self.default_model_service].type
-        self.model_name = self.config.llm.model_services[
+        self.model_type = self.config.llm.llm_services[self.default_model_service].type
+        self.model_name = self.config.llm.llm_services[
             self.default_model_service].default_model
-        # self.model_service_list = self.config.llm.model_services.keys()
-        # self.model_name_list = self.config.llm.model_services[self.default_model_service].models
+        # self.model_service_list = self.config.llm.llm_services.keys()
+        # self.model_name_list = self.config.llm.llm_services[self.default_model_service].models
 
-        self.model_args = self.config.llm.model_services[self.default_model_service].args
+        self.model_args = self.config.llm.llm_services[self.default_model_service].args
 
         self.db_manager = DatabaseManager(database_name, max_message_length)
-        self.model_factory = ModelFactory()
+        self.model_factory = LLMModelFactory()
 
         self.ui = self.init_ui()
 
@@ -76,8 +76,7 @@ class BatchUI:
                                         label='Download filetype'
                                     )
                                     self.download_df_merged = gr.Button(
-                                        value='Save Merged Dataframe as File',
-                                        label='Save Merged Dataframe as File'
+                                        value='Save Merged Dataframe as File'
                                     )
 
                         with gr.Tab("Auto Collecting"):
@@ -102,8 +101,7 @@ class BatchUI:
                                         label='Download filetype'
                                     )
                                     self.download_df_res = gr.Button(
-                                        value='Save Dataframe Results as File',
-                                        label='Download Dataframe Results'
+                                        value='Save Dataframe Results as File'
                                     )
 
                 with gr.Column():
@@ -111,14 +109,14 @@ class BatchUI:
                         with gr.Row():
                             self.llm_service_dropdown = gr.Dropdown(
                                 label='Choice LLM Service',
-                                choices=self.config.llm.model_services.keys(),
+                                choices=self.config.llm.llm_services.keys(),
                                 value=self.default_model_service,
                                 interactive=True,
                                 allow_custom_value=False
                             )
                             self.llm_model_name_dropdown = gr.Dropdown(
                                 label="Choice LLM Model Name",
-                                choices=self.config.llm.model_services[self.default_model_service].models,
+                                choices=self.config.llm.llm_services[self.default_model_service].models,
                                 value=self.model_name,
                                 interactive=True,
                                 allow_custom_value=True
@@ -185,7 +183,6 @@ class BatchUI:
                         with gr.Row():
                             self.table_file = gr.File(
                                 label="Upload file(*.csv/xls/xlsx)",
-                                type="file",
                                 file_types=["csv", "xls", "xlsx"],
                                 height=120
                             )
@@ -317,7 +314,7 @@ class BatchUI:
         return pd.concat([refined_table_input, table_output], axis=1, ignore_index=True)
 
     def update_llm_config(self, llm_service, llm_model_name):
-        model_service = self.config.llm.model_services[llm_service]
+        model_service = self.config.llm.llm_services[llm_service]
         self.model_args = model_service.args
         self.model_type = model_service.type
 
@@ -378,9 +375,9 @@ class BatchUI:
 
     def update_llm_model_name_dropdown(self, cur_llm_service):
         # self.model_name_list = self.config_loader.get_model_name_list(cur_llm_service)
-        # self.model_name_list = self.config.llm.model_services[cur_llm_service].models
+        # self.model_name_list = self.config.llm.llm_services[cur_llm_service].models
         self.default_model_service = cur_llm_service
-        return gr.Dropdown(choices=self.config.llm.model_services[self.default_model_service].models)
+        return gr.Dropdown(choices=self.config.llm.llm_services[self.default_model_service].models)
 
     def update_system_msg_and_user_msg(self):
         system_msg = gr.update(choices=self.db_manager.get_messages("system_messages"))

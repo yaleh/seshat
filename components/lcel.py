@@ -1,10 +1,12 @@
 import os
 
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
+from langchain_community.chat_models import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.llms.huggingface_hub import HuggingFaceHub
 from langchain.llms.replicate import Replicate
+from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 
-class ModelFactory:
+class LLMModelFactory:
     def create_model(self, model_type, model_name, **llm_config):
         if model_type == 'OpenAI':
             return ChatOpenAI(
@@ -33,3 +35,11 @@ class ModelFactory:
                 )
         else:
             raise ValueError("Unsupported chatbot type")
+        
+class EmbeddingFactory:
+    def __init__(self):
+        pass
+
+    def create(self, model_type: str, **kwargs):
+        model_class = globals()[model_type]
+        return model_class(**kwargs)
