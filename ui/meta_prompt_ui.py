@@ -13,8 +13,6 @@ class MetaPromptUI:
         self.config = config
 
         self.chatbot_factory = ModelFactory()
-        # self.config_loader = ConfigLoader(config_path='configs/custom_llm_config.yaml')
-        # self.model_service_list = self.config_loader.get_model_service_list()
 
         self.model_service_list = self.config.llm.default_model_service
         self.model_factory = ModelFactory()
@@ -25,9 +23,6 @@ class MetaPromptUI:
         self.generating_model_args = self.config.llm.model_services[self.generating_model_service].args.dict()
         self.generating_model_name = self.config.meta_prompt.default_meta_model_name
     
-        # self.generating_llm_config = self.config_loader.get_model_config(self.default_generating_model_service)
-        # self.generating_model_name_list = self.config_loader.get_model_name_list(self.default_generating_model_service)
-        # self.generating_llmbot = self.chatbot_factory.create_chatbot(chatbot_type=self.default_generating_model_service, model_name=self.default_generating_model_name, **self.generating_llm_config)
         self.generating_show_other_options = False
 
         # testing llm
@@ -36,9 +31,6 @@ class MetaPromptUI:
         self.testing_model_args = self.config.llm.model_services[self.testing_model_service].args.dict()
         self.testing_model_name = self.config.meta_prompt.default_target_model_name
     
-        # self.testing_llm_config = self.config_loader.get_model_config(self.default_testing_model_service)
-        # self.testing_model_name_list = self.config_loader.get_model_name_list(self.default_testing_model_service)
-        # self.testing_llmbot = self.chatbot_factory.create_chatbot(chatbot_type=self.default_testing_model_service, model_name=self.default_testing_model_name, **self.testing_llm_config)
         self.testing_show_other_options = False
 
         self.enable_other_user_prompts = False
@@ -99,7 +91,14 @@ class MetaPromptUI:
                     with gr.Row():
                         self.run_meta_btn = gr.Button(value="↑ Single Step Optimize")
                         self.run_new_btn = gr.Button(value="⟳ Run New")
-                        self.run_new_btn.click(fn=self.test_prompt, inputs=[self.new_system_prompt_textbox, self.testing_user_prompt_textbox], outputs=[self.new_output_textbox])
+                        self.run_new_btn.click(
+                            fn=self.test_prompt,
+                            inputs=[
+                                self.new_system_prompt_textbox,
+                                self.testing_user_prompt_textbox
+                            ],
+                            outputs=[self.new_output_textbox]
+                        )
                 with gr.Column():
                     self.current_system_prompt_textbox = gr.Textbox(
                         label="Current System Prompt",
@@ -117,15 +116,28 @@ class MetaPromptUI:
                     with gr.Row():
                         self.accept_new_btn = gr.Button(value="→ Accept New Prompt")
                         self.run_current_btn = gr.Button(value="⟳ Run Current")
-                        self.accept_new_btn.click(fn=self.copy_new_prompts,
-                                                inputs=[self.new_system_prompt_textbox, self.new_output_textbox],
-                                                outputs=[self.current_system_prompt_textbox, self.current_output_textbox])
-                        self.run_current_btn.click(fn=self.test_prompt, inputs=[self.current_system_prompt_textbox, self.testing_user_prompt_textbox], outputs=[self.current_output_textbox])
-                    self.similar_candidate_textbox = gr.Textbox(label="Similarity Delta Between New and Current Output", lines=1, interactive=True)
+                        self.accept_new_btn.click(
+                            fn=self.copy_new_prompts,
+                            inputs=[self.new_system_prompt_textbox, self.new_output_textbox],
+                            outputs=[self.current_system_prompt_textbox, self.current_output_textbox]
+                        )
+                        self.run_current_btn.click(
+                            fn=self.test_prompt,
+                            inputs=[self.current_system_prompt_textbox, self.testing_user_prompt_textbox],
+                            outputs=[self.current_output_textbox]
+                        )
+
+                    self.similar_candidate_textbox = gr.Textbox(
+                        label="Similarity Delta Between New and Current Output",
+                        lines=1,
+                        interactive=True
+                    )
                     self.compare_outputs_btn = gr.Button(value="Compare Outputs")
-                    self.compare_outputs_btn.click(self.compare_outputs,
-                                           [self.new_output_textbox, self.current_output_textbox, self.expect_output_textbox],
-                                           [self.similar_candidate_textbox])
+                    self.compare_outputs_btn.click(
+                        self.compare_outputs,
+                        [self.new_output_textbox, self.current_output_textbox, self.expect_output_textbox],
+                        [self.similar_candidate_textbox]
+                    )
 
             with gr.Row():
                 with gr.Column():
@@ -145,8 +157,17 @@ class MetaPromptUI:
                             interactive=True,
                             allow_custom_value=False
                         )
-                    self.generating_llm_service_dropdown.change(self.update_llm_model_name_dropdown, [self.generating_llm_service_dropdown], [self.generating_llm_model_name_dropdown])
-                    self.generating_llm_other_option_checkbox = gr.Checkbox(value=False, label="More Generating LLM Model Options")
+
+                    self.generating_llm_service_dropdown.change(
+                        self.update_llm_model_name_dropdown,
+                        [self.generating_llm_service_dropdown],
+                        [self.generating_llm_model_name_dropdown]
+                    )
+                    self.generating_llm_other_option_checkbox = gr.Checkbox(
+                        value=False,
+                        label="More Generating LLM Model Options"
+                    )
+
                     self.generating_llm_model_temperature_slider = gr.Slider(
                         minimum=0.0,
                         maximum=1.0,
@@ -183,11 +204,61 @@ class MetaPromptUI:
                         label="LLM Model Max Retries",
                         visible=False
                     )
-                    self.generating_llm_other_option_checkbox.change(self.show_other_llm_option, inputs=[self.generating_llm_other_option_checkbox], outputs=[self.generating_llm_model_temperature_slider, self.generating_llm_model_max_tokens_slider, self.generating_llm_model_request_timeout_slider, self.generating_llm_model_max_retries_slider])
-                    self.generating_llm_model_name_dropdown.change(fn=self.update_generating_llmbot, inputs=[self.generating_llm_service_dropdown, self.generating_llm_model_name_dropdown, self.generating_llm_model_temperature_slider, self.generating_llm_model_max_tokens_slider, self.generating_llm_model_request_timeout_slider, self.generating_llm_model_max_retries_slider])
-                    self.generating_llm_model_temperature_slider.change(fn=self.update_generating_llmbot, inputs=[self.generating_llm_service_dropdown, self.generating_llm_model_name_dropdown, self.generating_llm_model_temperature_slider, self.generating_llm_model_max_tokens_slider, self.generating_llm_model_request_timeout_slider, self.generating_llm_model_max_retries_slider])
-                    self.generating_llm_model_max_tokens_slider.change(fn=self.update_generating_llmbot, inputs=[self.generating_llm_service_dropdown, self.generating_llm_model_name_dropdown, self.generating_llm_model_temperature_slider, self.generating_llm_model_max_tokens_slider, self.generating_llm_model_request_timeout_slider, self.generating_llm_model_max_retries_slider])
-                    self.generating_llm_model_request_timeout_slider.change(fn=self.update_generating_llmbot, inputs=[self.generating_llm_service_dropdown, self.generating_llm_model_name_dropdown, self.generating_llm_model_temperature_slider, self.generating_llm_model_max_tokens_slider, self.generating_llm_model_request_timeout_slider, self.generating_llm_model_max_retries_slider])
+
+                    self.generating_llm_other_option_checkbox.change(
+                        self.show_other_llm_option,
+                        inputs=[self.generating_llm_other_option_checkbox],
+                        outputs=[
+                            self.generating_llm_model_temperature_slider,
+                            self.generating_llm_model_max_tokens_slider,
+                            self.generating_llm_model_request_timeout_slider,
+                            self.generating_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.generating_llm_model_name_dropdown.change(
+                        fn=self.update_generating_llmbot,
+                        inputs=[
+                            self.generating_llm_service_dropdown,
+                            self.generating_llm_model_name_dropdown,
+                            self.generating_llm_model_temperature_slider,
+                            self.generating_llm_model_max_tokens_slider,
+                            self.generating_llm_model_request_timeout_slider,
+                            self.generating_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.generating_llm_model_temperature_slider.change(
+                        fn=self.update_generating_llmbot,
+                        inputs=[
+                            self.generating_llm_service_dropdown,
+                            self.generating_llm_model_name_dropdown,
+                            self.generating_llm_model_temperature_slider,
+                            self.generating_llm_model_max_tokens_slider,
+                            self.generating_llm_model_request_timeout_slider,
+                            self.generating_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.generating_llm_model_max_tokens_slider.change(
+                        fn=self.update_generating_llmbot,
+                        inputs=[
+                            self.generating_llm_service_dropdown,
+                            self.generating_llm_model_name_dropdown,
+                            self.generating_llm_model_temperature_slider,
+                            self.generating_llm_model_max_tokens_slider,
+                            self.generating_llm_model_request_timeout_slider,
+                            self.generating_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.generating_llm_model_request_timeout_slider.change(
+                        fn=self.update_generating_llmbot,
+                        inputs=[
+                            self.generating_llm_service_dropdown,
+                            self.generating_llm_model_name_dropdown,
+                            self.generating_llm_model_temperature_slider,
+                            self.generating_llm_model_max_tokens_slider,
+                            self.generating_llm_model_request_timeout_slider,
+                            self.generating_llm_model_max_retries_slider
+                        ]
+                    )
 
                     # llm 服务
                     with gr.Row():
@@ -205,8 +276,17 @@ class MetaPromptUI:
                             interactive=True,
                             allow_custom_value=False
                         )
-                    self.testing_llm_service_dropdown.change(self.update_llm_model_name_dropdown, [self.testing_llm_service_dropdown], [self.testing_llm_model_name_dropdown])
-                    self.testing_llm_other_option_checkbox = gr.Checkbox(value=False, label="More Testing LLM Model Options")
+
+                    self.testing_llm_service_dropdown.change(
+                        self.update_llm_model_name_dropdown,
+                        [self.testing_llm_service_dropdown],
+                        [self.testing_llm_model_name_dropdown]
+                    )
+                    self.testing_llm_other_option_checkbox = gr.Checkbox(
+                        value=False,
+                        label="More Testing LLM Model Options"
+                    )
+
                     self.testing_llm_model_temperature_slider = gr.Slider(
                         minimum=0.0,
                         maximum=1.0,
@@ -243,11 +323,61 @@ class MetaPromptUI:
                         label="LLM Model Max Retries",
                         visible=False
                     )
-                    self.testing_llm_other_option_checkbox.change(self.show_other_llm_option, inputs=[self.testing_llm_other_option_checkbox], outputs=[self.testing_llm_model_temperature_slider, self.testing_llm_model_max_tokens_slider, self.testing_llm_model_request_timeout_slider, self.testing_llm_model_max_retries_slider])
-                    self.testing_llm_model_name_dropdown.change(fn=self.update_testing_llmbot, inputs=[self.testing_llm_service_dropdown, self.testing_llm_model_name_dropdown, self.testing_llm_model_temperature_slider, self.testing_llm_model_max_tokens_slider, self.testing_llm_model_request_timeout_slider, self.testing_llm_model_max_retries_slider])
-                    self.testing_llm_model_temperature_slider.change(fn=self.update_testing_llmbot, inputs=[self.testing_llm_service_dropdown, self.testing_llm_model_name_dropdown, self.testing_llm_model_temperature_slider, self.testing_llm_model_max_tokens_slider, self.testing_llm_model_request_timeout_slider, self.testing_llm_model_max_retries_slider])
-                    self.testing_llm_model_max_tokens_slider.change(fn=self.update_testing_llmbot, inputs=[self.testing_llm_service_dropdown, self.testing_llm_model_name_dropdown, self.testing_llm_model_temperature_slider, self.testing_llm_model_max_tokens_slider, self.testing_llm_model_request_timeout_slider, self.testing_llm_model_max_retries_slider])
-                    self.testing_llm_model_request_timeout_slider.change(fn=self.update_testing_llmbot, inputs=[self.testing_llm_service_dropdown, self.testing_llm_model_name_dropdown, self.testing_llm_model_temperature_slider, self.testing_llm_model_max_tokens_slider, self.testing_llm_model_request_timeout_slider, self.testing_llm_model_max_retries_slider])
+
+                    self.testing_llm_other_option_checkbox.change(
+                        self.show_other_llm_option,
+                        inputs=[self.testing_llm_other_option_checkbox],
+                        outputs=[
+                            self.testing_llm_model_temperature_slider,
+                            self.testing_llm_model_max_tokens_slider,
+                            self.testing_llm_model_request_timeout_slider,
+                            self.testing_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.testing_llm_model_name_dropdown.change(
+                        fn=self.update_testing_llmbot,
+                        inputs=[
+                            self.testing_llm_service_dropdown,
+                            self.testing_llm_model_name_dropdown,
+                            self.testing_llm_model_temperature_slider,
+                            self.testing_llm_model_max_tokens_slider,
+                            self.testing_llm_model_request_timeout_slider,
+                            self.testing_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.testing_llm_model_temperature_slider.change(
+                        fn=self.update_testing_llmbot,
+                        inputs=[
+                            self.testing_llm_service_dropdown,
+                            self.testing_llm_model_name_dropdown,
+                            self.testing_llm_model_temperature_slider,
+                            self.testing_llm_model_max_tokens_slider,
+                            self.testing_llm_model_request_timeout_slider,
+                            self.testing_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.testing_llm_model_max_tokens_slider.change(
+                        fn=self.update_testing_llmbot,
+                        inputs=[
+                            self.testing_llm_service_dropdown,
+                            self.testing_llm_model_name_dropdown,
+                            self.testing_llm_model_temperature_slider,
+                            self.testing_llm_model_max_tokens_slider,
+                            self.testing_llm_model_request_timeout_slider,
+                            self.testing_llm_model_max_retries_slider
+                        ]
+                    )
+                    self.testing_llm_model_request_timeout_slider.change(
+                        fn=self.update_testing_llmbot,
+                        inputs=[
+                            self.testing_llm_service_dropdown,
+                            self.testing_llm_model_name_dropdown,
+                            self.testing_llm_model_temperature_slider,
+                            self.testing_llm_model_max_tokens_slider,
+                            self.testing_llm_model_request_timeout_slider,
+                            self.testing_llm_model_max_retries_slider
+                        ]
+                    )
 
                 with gr.Column():
                     self.meta_system_prompt_textbox = gr.Textbox(label="Meta System Prompt",
@@ -332,17 +462,6 @@ class MetaPromptUI:
         else:
             self.generating_model_args.pop('temperature')
 
-        # self.default_generating_model_service = llm_service
-        # self.default_generating_model_name = model_name
-        # self.generating_llm_config = self.config_loader.get_model_config(self.default_generating_model_service)
-        # self.generating_llmbot = self.chatbot_factory.create_chatbot(chatbot_type=self.default_generating_model_service,
-        #                                                             model_name=self.default_generating_model_name,
-        #                                                             tempreature=temperature,
-        #                                                             max_retries=max_retries,
-        #                                                             request_timeout=request_timeout,
-        #                                                             max_tokens=max_tokens,
-        #                                                             **self.generating_llm_config)
-
     def update_testing_llmbot(self, llm_service,
                                     model_name,
                                     temperature,
@@ -364,17 +483,6 @@ class MetaPromptUI:
             self.testing_model_args['temperature'] = temperature
         else:
             self.testing_model_args.pop('temperature')
-
-        # self.default_testing_model_service = llm_service
-        # self.default_testing_model_name = model_name
-        # self.testing_llm_config = self.config_loader.get_model_config(self.default_generating_model_service)
-        # self.testing_llmbot = self.chatbot_factory.create_chatbot(chatbot_type=self.default_generating_model_service,
-        #                                                             model_name=self.default_generating_model_name,
-        #                                                             tempreature=temperature,
-        #                                                             max_retries=max_retries,
-        #                                                             request_timeout=request_timeout,
-        #                                                             max_tokens=max_tokens,
-        #                                                             **self.generating_llm_config)
 
     def test_prompt(self, system_prompt, user_prompt):
         # Create the prompt
@@ -503,15 +611,48 @@ class MetaPromptUI:
                 # Reset current_output to None so it gets recalculated in the next iteration
                 current_output = None
 
-        current_system_prompt = current_system_prompt
+        # current_system_prompt = current_system_prompt
         return current_system_prompt, changed  # Return the optimized system prompt
 
     def show_other_llm_option(self, visible_flag):
-        return \
-            gr.Slider( minimum=0.0, maximum=1.0, step=0.01, value=0.0, interactive=True, label="LLM Model Temperature", visible=visible_flag), \
-            gr.Slider(minimum=0,maximum=32000,step=256,value=0,interactive=True,label="LLM Model Token Limit (0 for auto)",visible=visible_flag), \
-            gr.Slider(minimum=0,maximum=600,step=5,value=600,interactive=True,label="LLM Model Timeout",visible=visible_flag), \
-            gr.Slider(minimum=0,maximum=30,step=1,value=6,interactive=True,label="LLM Model Max Retries",visible=visible_flag)
+        return (
+            gr.Slider(
+                minimum=0.0,
+                maximum=1.0,
+                step=0.01,
+                value=0.0,
+                interactive=True,
+                label="LLM Model Temperature",
+                visible=visible_flag
+            ),
+            gr.Slider(
+                minimum=0,
+                maximum=32000,
+                step=256,
+                value=0,
+                interactive=True,
+                label="LLM Model Token Limit (0 for auto)",
+                visible=visible_flag
+            ),
+            gr.Slider(
+                minimum=0,
+                maximum=600,
+                step=5,
+                value=600,
+                interactive=True,
+                label="LLM Model Timeout",
+                visible=visible_flag
+            ),
+            gr.Slider(
+                minimum=0,
+                maximum=30,
+                step=1,
+                value=6,
+                interactive=True,
+                label="LLM Model Max Retries",
+                visible=visible_flag
+            )
+        )
 
     def update_llm_model_name_dropdown(self, cur_llm_service):
         # self.model_name_list = self.config_loader.get_model_name_list(cur_llm_service)
@@ -520,11 +661,14 @@ class MetaPromptUI:
 
     def update_enable_other_user_prompts(self, new_value):
         self.enable_other_user_prompts = new_value
-        return \
-            gr.Textbox.update(visible=new_value), \
-                gr.Textbox.update(
-                    value = self.config.meta_prompt.meta_system_prompt_with_other_prompts if new_value else self.config.meta_prompt.meta_system_prompt
-                    )
+        return (
+            gr.Textbox.update(visible=new_value),
+            gr.Textbox.update(
+                value=self.config.meta_prompt.meta_system_prompt_with_other_prompts
+                if new_value
+                else self.config.meta_prompt.meta_system_prompt
+            )
+        )
 
     def compare_strings(self, alpha: str, beta: str, expected: str) -> str:
         # If both ALPHA and BETA are empty, return None

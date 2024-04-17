@@ -200,8 +200,10 @@ class BatchUI:
                     with gr.Group():
                         with gr.Row():
                             self.send_call = gr.Button(value="Send(call)", visible=False)
-                            self.clear_output = gr.ClearButton([self.chatbot], value="Clear Output")
-                            self.clear_all = gr.ClearButton([self.user_msg, self.system_msg, self.chatbot], value="Clear All")
+                            self.clear_output = gr.ClearButton([self.chatbot],
+                                                               value="Clear Output")
+                            self.clear_all = gr.ClearButton([self.user_msg, self.system_msg,
+                                                             self.chatbot], value="Clear All")
                     
             # Bind events
             self.bind_events(table_block)
@@ -290,7 +292,8 @@ class BatchUI:
         )
         self.merge_table_button.click(
             fn=self.merge_table,
-            inputs=[self.table_dataframe_input, self.table_dataframe_output, self.batch_start, self.batch_end],
+            inputs=[self.table_dataframe_input, self.table_dataframe_output,
+                self.batch_start, self.batch_end],
             outputs=[self.table_dataframe_merged]
         )
         self.download_df_res.click(
@@ -452,7 +455,8 @@ class BatchUI:
                 Human_list = [item.messages[1].content for item in Human_list]
                 chat_history += list(zip(Human_list, llmbot_res))
                 table_output.iloc[i:i+batch_len,table_output.shape[-1]-1]=llmbot_res
-                gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(selected_table) else len(selected_table)}/{len(selected_table)}")
+                gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(selected_table) else len(selected_table)}/"
+                        f"{len(selected_table)}")
                 progress((i+batch_len, len(table_refined)), desc="Processing...")
             except Exception as e:
                 raise gr.Error(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
