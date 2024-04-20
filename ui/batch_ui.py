@@ -187,9 +187,9 @@ class BatchUI:
                                 height=120
                             )
                             with gr.Column():
-                                self.batch_start = gr.Number(label="Batch Start", value=0, precision=0)
-                                self.batch_end = gr.Number(label="Batch End (excluded)", value=0, precision=0)
-                                self.batch_size = gr.Number(label="Batch Size", value=10, precision=0)
+                                self.batch_start = gr.Number(label="Batch Start", value=0, minimum=0, precision=0)
+                                self.batch_end = gr.Number(label="Batch End (excluded)", value=0, minimum=0, precision=0)
+                                self.batch_size = gr.Number(label="Batch Size", value=10, minimum=0, precision=0)
                         with gr.Row():
                             self.batch_send_button = gr.Button(value="Batch Send")
                             self.cancel_batch_button = gr.Button(value="Cancel Batch Send")
@@ -311,7 +311,8 @@ class BatchUI:
             refined_table_input.reset_index(drop=True, inplace=True)
         except Exception as e:
             raise gr.Error('请确保已上传 `Table Dataframe for Input`: %s' % e)
-        return pd.concat([refined_table_input, table_output], axis=1, ignore_index=True)
+        result = pd.concat([refined_table_input, table_output], axis=1, ignore_index=False)
+        return result
 
     def update_llm_config(self, llm_service, llm_model_name):
         model_service = self.config.llm.llm_services[llm_service]
@@ -506,8 +507,13 @@ class BatchUI:
         except Exception as e:
             raise gr.Error(e)
         df = TableParser.add_skip_column(df)
-        return df, 0, len(df), len(df)
-
+        df_size = len(df)
+        return (
+            df,
+            gr.update(value=0, minimum=0, maximum=df_size),
+            gr.update(value=df_size, minimum=0, maximum=df_size),
+            gr.update(value=df_size, minimum=0, maximum=df_size)
+        )
     def get_table_rows(self, table):
         return table.shape[0]
 
