@@ -998,6 +998,24 @@ langchain-core = ">=0.1.28,<0.2.0"
 extended-testing = ["lxml (>=5.1.0,<6.0.0)"]
 
 [[package]]
+name = "langserve"
+version = "0.1.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "<4.0.0,>=3.8.1"
+
+[package.dependencies]
+httpx = ">=0.23.0"
+langchain-core = ">=0.1.0,<0.2.0"
+orjson = ">=2"
+pydantic = ">=1"
+
+[package.extras]
+server = ["fastapi (>=0.90.1,<1)", "sse-starlette (>=1.3.0,<2.0.0)"]
+all = ["fastapi (>=0.90.1,<1)", "sse-starlette (>=1.3.0,<2.0.0)"]
+
+[[package]]
 name = "langsmith"
 version = "0.1.40"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
@@ -1935,7 +1953,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "bd23c506fe1d1e30e6954f90ed4a54fd7ff0b94fe816ef23ef911135daafe19e"
+content-hash = "a637e52d2c79eaffdf1d98a31673fd19afce9ab59d5cb4d2b2f076e7087c497f"
 
 [metadata.files]
 aiofiles = []
@@ -2005,6 +2023,7 @@ langchain-community = []
 langchain-core = []
 langchain-openai = []
 langchain-text-splitters = []
+langserve = []
 langsmith = []
 markdown-it-py = []
 markupsafe = []

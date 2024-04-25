@@ -157,57 +157,70 @@ class BatchUI:
                             label="LLM Model Max Retries"
                         )
 
-                    self.system_msg_textbox = gr.Textbox(label="System Prompt", lines=5)
-                    self.system_msg = gr.Dropdown(
-                        choices=self.db_manager.get_messages("system_messages"), 
-                        label="System Prompt History", allow_custom_value=True
-                    )
-                    self.user_msg_textbox = gr.Textbox(label="User Prompt", lines=5)
-                    self.user_msg = gr.Dropdown(
-                        choices=self.db_manager.get_messages("user_messages"), 
-                        label="User Prompt History", allow_custom_value=True
-                    )
-                    self.csv_output_checkbox = gr.Checkbox(label="Batch Process By Table", value=True)
+                    self.system_prompt_tab = gr.Tab('System and User Prompt')
+                    self.string_prompt_tab = gr.Tab('String Prompt')
 
-                    with gr.Group(visible=True) as table_block:
-                        self.table_dataframe_input = gr.Dataframe(
-                            label="Table Dataframe for Input",
-                            value=[],
-                            wrap=True,
-                            interactive=True
+                    with self.system_prompt_tab:
+                        self.system_msg_textbox = gr.Textbox(label="System Prompt", lines=5)
+                        self.system_msg = gr.Dropdown(
+                            choices=self.db_manager.get_messages("system_messages"), 
+                            label="System Prompt History", allow_custom_value=True
                         )
-                        with gr.Row():
-                            self.table_rows = gr.Number(label="Table Rows", value=0, precision=0, 
-                                                        interactive=False)
-                            self.refresh_table_rows = gr.Button(value="Refresh Table Rows")
-                        with gr.Row():
-                            self.table_file = gr.File(
-                                label="Upload file(*.csv/xls/xlsx)",
-                                file_types=["csv", "xls", "xlsx"],
-                                height=120
-                            )
-                            with gr.Column():
-                                self.batch_start = gr.Number(label="Batch Start", value=0, minimum=0, precision=0)
-                                self.batch_end = gr.Number(label="Batch End (excluded)", value=0, minimum=0, precision=0)
-                                self.batch_size = gr.Number(label="Batch Size", value=10, minimum=0, precision=0)
-                        with gr.Row():
-                            self.batch_send_button = gr.Button(value="Batch Send")
-                            self.cancel_batch_button = gr.Button(value="Cancel Batch Send")
+                        self.user_msg_textbox = gr.Textbox(label="User Prompt", lines=5)
+                        self.user_msg = gr.Dropdown(
+                            choices=self.db_manager.get_messages("user_messages"), 
+                            label="User Prompt History", allow_custom_value=True
+                        )
+                    with self.string_prompt_tab:
+                        self.string_msg_textbox = gr.Textbox(label="String Prompt", lines=5)
+                        self.string_msg = gr.Dropdown(
+                            choices=self.db_manager.get_messages("string_messages"), 
+                            label="String Prompt History", allow_custom_value=True
+                        )
+                    # self.csv_output_checkbox = gr.Checkbox(label="Batch Process By Table", value=True)
 
                     with gr.Group():
-                        with gr.Row():
-                            self.send_call = gr.Button(value="Send(call)", visible=False)
-                            self.clear_output = gr.ClearButton([self.chatbot],
-                                                               value="Clear Output")
-                            self.clear_all = gr.ClearButton([self.user_msg, self.system_msg,
-                                                             self.chatbot], value="Clear All")
+                        with gr.Tab("Single"):
+                            self.send_call = gr.Button(value="Send(call)", variant='primary')
+
+                        with gr.Tab("Batch"):
+                            self.table_dataframe_input = gr.Dataframe(
+                                label="Table Dataframe for Input",
+                                value=[],
+                                wrap=True,
+                                interactive=True
+                            )
+                            with gr.Row():
+                                self.table_rows = gr.Number(label="Table Rows", value=0, precision=0, 
+                                                            interactive=False)
+                                self.refresh_table_rows = gr.Button(value="Refresh Table Rows")
+                            with gr.Row():
+                                self.table_file = gr.File(
+                                    label="Upload file(*.csv/xls/xlsx)",
+                                    file_types=["csv", "xls", "xlsx"],
+                                    height=120
+                                )
+                                with gr.Column():
+                                    self.batch_start = gr.Number(label="Batch Start", value=0, minimum=0, precision=0)
+                                    self.batch_end = gr.Number(label="Batch End (excluded)", value=0, minimum=0, precision=0)
+                                    self.batch_size = gr.Number(label="Batch Size", value=10, minimum=0, precision=0)
+                            with gr.Row():
+                                self.batch_send_button = gr.Button(value="Batch Send", variant='primary')
+                                self.cancel_batch_button = gr.Button(value="Cancel Batch Send")
+
+                        with gr.Group():
+                            with gr.Row():
+                                self.clear_output = gr.ClearButton([self.chatbot],
+                                                                value="Clear Output")
+                                self.clear_all = gr.ClearButton([self.user_msg, self.system_msg,
+                                                                self.chatbot], value="Clear All")
                     
             # Bind events
-            self.bind_events(table_block)
+            self.bind_events()
 
         return batch_ui
 
-    def bind_events(self, table_block):
+    def bind_events(self):
         self.llm_other_option_checkbox.change(
             self.show_other_llm_option,
             inputs=[self.llm_other_option_checkbox],
@@ -254,11 +267,11 @@ class BatchUI:
             [self.user_msg]
         )
 
-        self.csv_output_checkbox.change(
-            lambda checked: (gr.update(visible=checked), gr.update(visible=not checked)),
-            [self.csv_output_checkbox],
-            [table_block, self.send_call]
-        )
+        # self.csv_output_checkbox.change(
+        #     lambda checked: (gr.update(visible=checked), gr.update(visible=not checked)),
+        #     [self.csv_output_checkbox],
+        #     [table_block, self.send_call]
+        # )
         self.update_table_button.click(
             self.update_table,
             [self.chatbot, self.updating_table_method],
@@ -411,10 +424,18 @@ class BatchUI:
         gr.Info(f'model service: {self.default_model_service}')
         gr.Info(f'model name: {self.model_name}')
 
+        static_system_prompt = "{system_prompt}"
+        static_user_prompt = "{user_prompt}"
+
         try:
-            chat_prompt = self.create_chat_prompt(system_prompt, user_prompt, chat_history)
+            chat_prompt = self.create_chat_prompt(static_system_prompt,
+                                                  static_user_prompt,
+                                                  chat_history)
             chat_chain = self.create_chat_chain(chat_prompt)
-            llmbot_res = chat_chain.invoke({})
+            llmbot_res = chat_chain.invoke({
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt
+            })
             chat_history.append((user_prompt, llmbot_res))
         except Exception as e:
             raise gr.Error(f"send_call_func-err:{e}")
@@ -439,19 +460,20 @@ class BatchUI:
         
         # 根据batch step，对table进行切片处理
         for i in range(0,len(table_refined), batch_len):
-            table_step = table_refined.iloc[i:i+batch_len,:]
-            # 构造chain需要的输入
-            input_list = []
-            for _, row in table_step.iterrows():
-                kv_item = {}
-                for input_varivable in chat_prompt.input_variables:
-                    kv_item[input_varivable] = row[input_varivable]
-                input_list.append(kv_item)
             try:
+                table_step = table_refined.iloc[i:i+batch_len,:]
+                # 构造chain需要的输入
+                input_list = []
+                for _, row in table_step.iterrows():
+                    kv_item = {}
+                    for input_varivable in chat_prompt.input_variables:
+                        kv_item[input_varivable] = row[input_varivable]
+                    input_list.append(kv_item)
+
                 llmbot_res = chat_chain.batch(input_list)
-                Human_list = chat_prompt.batch(input_list)
-                Human_list = [item.messages[1].content for item in Human_list]
-                chat_history += list(zip(Human_list, llmbot_res))
+                human_list = chat_prompt.batch(input_list)
+                human_list = [item.messages[1].content for item in human_list]
+                chat_history += list(zip(human_list, llmbot_res))
                 table_output.iloc[i:i+batch_len,table_output.shape[-1]-1]=llmbot_res
                 gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(selected_table) else len(selected_table)}/"
                         f"{len(selected_table)}")

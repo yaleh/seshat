@@ -1,11 +1,27 @@
 import datetime
 import sqlite3
 
+USER_MESSAGES_TABLE = "user_messages"
+SYSTEM_MESSAGES_TABLE = "system_messages"
+STRING_MESSAGES_TABLE = "string_messages"
+LANGSERVE_MESSAGES_TABLE = "langserve_messages"
+LANGSERVE_URLS_TABLE = "langserve_urls"
+
+tables = [
+    USER_MESSAGES_TABLE,
+    SYSTEM_MESSAGES_TABLE,
+    STRING_MESSAGES_TABLE,
+    LANGSERVE_MESSAGES_TABLE,
+    LANGSERVE_URLS_TABLE
+]
+
 class DatabaseManager:
     def __init__(self, database_name, max_message_length=65535):
         self.conn = sqlite3.connect(database_name, check_same_thread=False)
-        self.create_table("user_messages", ["timestamp TEXT", "message TEXT"])
-        self.create_table("system_messages", ["timestamp TEXT", "message TEXT"])
+
+        for table in tables:
+            self.create_table(table, ["timestamp TEXT", "message TEXT"])
+        
         self.max_message_length = max_message_length
 
     def create_table(self, table_name, columns):

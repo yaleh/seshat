@@ -57,10 +57,14 @@ class EmbeddingUI:
                         ["Pinecone", "Milvus"],
                         label="Vector Database",
                         value="Pinecone",
+                        visible=False,
                         interactive=True
                     )
 
-                    with gr.Tab("Pinecone"):
+                    self.pinecone_tab = gr.Tab("Pinecone")
+                    self.milvus_tab = gr.Tab("Milvus")
+
+                    with self.pinecone_tab:
                         self.pinecone_host = gr.Textbox(
                             label="Pinecone Host", placeholder="Pinecone Host"
                         )
@@ -68,7 +72,7 @@ class EmbeddingUI:
                             label="Pinecone API Key", placeholder="Pinecone API Key"
                         )
 
-                    with gr.Tab("Milvus"):
+                    with self.milvus_tab:
                         self.milvus_uri = gr.Textbox(
                             label="Milvus URI", placeholder="Milvus URI"
                         )
@@ -126,6 +130,9 @@ class EmbeddingUI:
                             interactive=False
                         )
                         self.vdb_search_btn = gr.Button(value="Search VDB", variant='primary')
+
+            self.pinecone_tab.select(self.select_vdb_tab, [], [self.vdb_type])
+            self.milvus_tab.select(self.select_vdb_tab, [], [self.vdb_type])
 
             self.refresh_vdb_btn.click(
                 self.refresh_vdb,
@@ -190,6 +197,9 @@ class EmbeddingUI:
             self.run_btn.click(self.run_agent, [self.input_text, self.model_name], [self.output_text])
 
         return block
+    
+    def select_vdb_tab(self, event: gr.SelectData):
+        return str(event.value)            
     
     def run_agent(self, input_text, model_name):
         # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
