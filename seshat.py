@@ -4,7 +4,7 @@ import gradio as gr
 from confz import FileSource, CLArgSource
 
 from tools.config_loader import AppConfig
-from ui import BatchUI, MetaPromptUI, EmbeddingUI, LangServeClientUI
+from ui import BatchUI, MetaPromptUI, EmbeddingUI, LangServeClientUI, FAQSummaryFixUI
 
 class ChatbotApp:
     def __init__(self, config=None):
@@ -12,19 +12,22 @@ class ChatbotApp:
         self.embedding_ui = EmbeddingUI(config)
         self.meta_ui = MetaPromptUI(config)
         self.langserve_client_ui = LangServeClientUI(config)
+        self.faq_summary_fix_ui = FAQSummaryFixUI(config)
 
         self.ui = gr.TabbedInterface(
             interface_list=[
                 self.batch_ui.ui,
                 self.langserve_client_ui.ui,
                 self.embedding_ui.ui, 
-                self.meta_ui.ui
+                self.meta_ui.ui,
+                self.faq_summary_fix_ui.ui
                 ],
             tab_names=[
                 'Batch',
                 'Lang Serve',
                 'Embedding', 
-                'Meta Prompt'
+                'Meta Prompt',
+                'FAQ Summary Fix'
                 ],
             title='Seshat'
         )
