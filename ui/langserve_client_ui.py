@@ -1,23 +1,17 @@
+import pprint
+import tempfile
+
 import gradio as gr
 import pandas as pd
-import tempfile
 
 from db.db_sqlite3 import DatabaseManager, LANGSERVE_URLS_TABLE, LANGSERVE_MESSAGES_TABLE
 from components.lcel import LLMModelFactory
-from langchain.prompts import HumanMessagePromptTemplate, SystemMessagePromptTemplate
-from langchain.schema import AIMessage, HumanMessage
-from langchain.schema.output_parser import StrOutputParser
-from tools.table_parser import TableParser
 from tools.utils import detect_encoding
 from langserve import RemoteRunnable
-import pprint
 
 class LangServeClientUI:
     # def __init__(self, db_manager, llmbot):
-    def __init__(self, config,
-                 database_name='messages.db',
-                 max_message_length=65535
-                 ):
+    def __init__(self, config):
 
         self.config = config
         self.default_model_service = self.config.llm.default_model_service
@@ -29,7 +23,10 @@ class LangServeClientUI:
 
         self.model_args = self.config.llm.llm_services[self.default_model_service].args
 
-        self.db_manager = DatabaseManager(database_name, max_message_length)
+        self.db_manager = DatabaseManager(
+            self.config.server.message_db, 
+            self.config.server.max_message_length
+        )
         self.model_factory = LLMModelFactory()
 
         self.ui = self.init_ui()

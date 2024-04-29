@@ -5,29 +5,27 @@ import tempfile
 from db.db_sqlite3 import DatabaseManager
 from components.lcel import LLMModelFactory
 from langchain.prompts import HumanMessagePromptTemplate, SystemMessagePromptTemplate
-from langchain.schema import AIMessage, HumanMessage
+from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from langchain.schema.output_parser import StrOutputParser
 from tools.table_parser import TableParser
 from tools.utils import detect_encoding
 
 class BatchUI:
     # def __init__(self, db_manager, llmbot):
-    def __init__(self, config,
-                 database_name='messages.db',
-                 max_message_length=65535
-                 ):
+    def __init__(self, config):
 
         self.config = config
         self.default_model_service = self.config.llm.default_model_service
         self.model_type = self.config.llm.llm_services[self.default_model_service].type
         self.model_name = self.config.llm.llm_services[
             self.default_model_service].default_model
-        # self.model_service_list = self.config.llm.llm_services.keys()
-        # self.model_name_list = self.config.llm.llm_services[self.default_model_service].models
 
         self.model_args = self.config.llm.llm_services[self.default_model_service].args
 
-        self.db_manager = DatabaseManager(database_name, max_message_length)
+        self.db_manager = DatabaseManager(
+            self.config.server.message_db, 
+            self.config.server.max_message_length
+        )
         self.model_factory = LLMModelFactory()
 
         self.ui = self.init_ui()
@@ -398,7 +396,7 @@ class BatchUI:
         user_msg = gr.update(choices=self.db_manager.get_messages("user_messages"))
         return system_msg, user_msg
 
-    def create_chat_prompt(self, system_prompt, user_prompt, chat_history):
+    def __create_chat_prompt(self, system_prompt, user_prompt, chat_history):
         # 将system_message 和 user_message 存入数据库
         if isinstance(user_prompt, str):
             self.db_manager.append_message("user_messages", user_prompt)
@@ -424,18 +422,21 @@ class BatchUI:
         gr.Info(f'model service: {self.default_model_service}')
         gr.Info(f'model name: {self.model_name}')
 
-        static_system_prompt = "{system_prompt}"
-        static_user_prompt = "{user_prompt}"
-
         try:
-            chat_prompt = self.create_chat_prompt(static_system_prompt,
-                                                  static_user_prompt,
-                                                  chat_history)
-            chat_chain = self.create_chat_chain(chat_prompt)
-            llmbot_res = chat_chain.invoke({
-                "system_prompt": system_prompt,
-                "user_prompt": user_prompt
-            })
+            if isinstance(user_prompt, str):
+                self.db_manager.append_message("user_messages", user_prompt)
+            if isinstance(system_prompt, str):
+                self.db_manager.append_message("system_messages", system_prompt)
+
+            chat_chain = self.model_factory.create_model(
+                model_type=self.model_type, 
+                model_name=self.model_name,
+                **self.model_args.dict()
+            ) | StrOutputParser()
+            llmbot_res = chat_chain.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
             chat_history.append((user_prompt, llmbot_res))
         except Exception as e:
             raise gr.Error(f"send_call_func-err:{e}")
@@ -446,7 +447,7 @@ class BatchUI:
         gr.Info(f'model service: {self.default_model_service}')
         gr.Info(f'model name: {self.model_name}')
 
-        chat_prompt = self.create_chat_prompt(system_prompt, user_prompt, chat_history)
+        chat_prompt = self.__create_chat_prompt(system_prompt, user_prompt, chat_history)
         chat_chain = self.create_chat_chain(chat_prompt)
 
         selected_table = table.iloc[int(batch_start):int(batch_end), :]
