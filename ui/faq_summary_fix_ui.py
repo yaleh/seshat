@@ -60,9 +60,9 @@ class FAQSummaryFixUI:
         faq_id = self._generate_id()
 
         if output == '<NO ANSWER/>':
-            answer = f"关于 {question}，详见链接 [{question}](faq: {faq_id})"
+            answer = f"关于 `{question}`，详见链接 [{question}](faq:{faq_id})"
         else:
-            answer = f"{output} 详见链接 [{question}](faq: {faq_id})"
+            answer = f"{output} 详见链接 [{question}](faq:{faq_id})"
 
         if text.startswith('Q: '):
             text = text.split('A: ')[1]

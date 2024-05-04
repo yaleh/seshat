@@ -1,6 +1,9 @@
 import tempfile
 
 def dump_dataframe(df, file_types):
+    # return None if df is None or empty, or the dim 0 is 1
+    if df is None or df.empty or df.shape[0] <= 1:
+        return None
     filenames = []
     for file_type in file_types:
         if file_type == 'csv':

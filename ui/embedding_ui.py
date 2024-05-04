@@ -8,6 +8,8 @@ from pinecone import Pinecone as PineconeClient
 from sklearn.cluster import SpectralClustering
 from pymilvus import MilvusClient
 from components.lcel import EmbeddingFactory
+from tools.table_parser import TableParser
+from tools.utils import detect_encoding
 
 # Define an array of model settings
 model_settings = [
@@ -102,13 +104,19 @@ class EmbeddingUI:
                         self.file_table = gr.File(label="Table Data")
 
                         with gr.Group():
-                            self.file_embeddings = gr.File(label="Embeddings")
+                            self.file_embeddings = gr.File(
+                                label="Embeddings",
+                                file_types=['csv', 'xls', 'xlsx']
+                            )
                             self.import_data_btn = gr.Button(value="Import Data", variant='primary')
 
                 with gr.Column(scale=2):
                     # Add a Gradio Dataframe and a Gradio File component
                     with gr.Tab("Table"):
                         self.input_dataframe = gr.Dataframe()
+                        with gr.Row():
+                            self.key_field = gr.Textbox(label="Key Field", value="id")
+                            self.value_field = gr.Textbox(label="Value Field", value="text")
 
                         with gr.Tab("Embedding"):
                             with gr.Row():
@@ -120,16 +128,33 @@ class EmbeddingUI:
                                 self.clustering_btn = gr.Button(value="Cluster Analysis", variant='primary')
 
                     with gr.Tab("Text"):
-                        self.input_text = gr.Textbox(label="Input Text")
-                        self.output_text = gr.Textbox(label="Output Text")
-                        self.run_btn = gr.Button(value="Embed", variant='primary')
+                        self.input_text = gr.Textbox(
+                            label="Input Text",
+                            show_copy_button=True,
+                            interactive=True
+                            )
+                        self.output_embedding = gr.Textbox(
+                            label="Embedding",
+                            show_copy_button=True,
+                            interactive=False
+                            )
+                        self.embed_text_btn = gr.Button(value="Embed", variant='primary')
 
                         self.vdb_search_output = gr.Textbox(
                             label="VDB Search Output", 
                             placeholder="VDB Search Output",
+                            show_copy_button=True,
                             interactive=False
                         )
-                        self.vdb_search_btn = gr.Button(value="Search VDB", variant='primary')
+                        self.vdb_search_meta = gr.Textbox(
+                            label="VDB Search Meta", 
+                            placeholder="VDB Search Meta",
+                            show_copy_button=True,
+                            interactive=False
+                        )
+                        with gr.Row():
+                            self.vdb_search_btn = gr.Button(value="Search VDB", variant='primary')
+                            self.embed_search_btn = gr.Button(value="Embed and Search VDB", variant='primary')
 
             self.pinecone_tab.select(self.select_vdb_tab, [], [self.vdb_type])
             self.milvus_tab.select(self.select_vdb_tab, [], [self.vdb_type])
@@ -155,7 +180,7 @@ class EmbeddingUI:
             )
             self.embed_dataframe_btn.click(
                 self.embed_dataframe,
-                [self.input_dataframe, self.model_name],
+                [self.input_dataframe, self.key_field, self.value_field, self.model_name],
                 [self.file_embeddings]
             )
             self.import_data_btn.click(
@@ -168,6 +193,7 @@ class EmbeddingUI:
                     self.milvus_token,
                     self.milvus_collection_name,
                     self.input_dataframe,
+                    self.value_field,
                     self.file_embeddings,
                     self.importing_batch_size
                 ],
@@ -177,6 +203,8 @@ class EmbeddingUI:
                 self.embed_import_dataframe,
                 [
                     self.input_dataframe,
+                    self.key_field,
+                    self.value_field,
                     self.model_name,
                     self.vdb_type,
                     self.pinecone_host,
@@ -194,7 +222,39 @@ class EmbeddingUI:
                 [self.input_dataframe, self.file_table]
             )
 
-            self.run_btn.click(self.run_agent, [self.input_text, self.model_name], [self.output_text])
+            self.embed_text_btn.click(
+                self.run_agent, 
+                [self.input_text, self.model_name], 
+                [self.output_embedding]
+            )
+
+            self.vdb_search_btn.click(
+                self.vdb_search,
+                [
+                    self.vdb_type,
+                    self.pinecone_host,
+                    self.pinecone_api_key,
+                    self.milvus_uri,
+                    self.milvus_token,
+                    self.milvus_collection_name,
+                    self.output_embedding
+                ],
+                [self.vdb_search_output, self.vdb_search_meta]
+            )
+            self.embed_search_btn.click(
+                self.embed_search,
+                [
+                    self.model_name,
+                    self.vdb_type,
+                    self.pinecone_host,
+                    self.pinecone_api_key,
+                    self.milvus_uri,
+                    self.milvus_token,
+                    self.milvus_collection_name,
+                    self.input_text
+                ],
+                [self.vdb_search_output, self.vdb_search_meta]
+            )
 
         return block
     
@@ -247,8 +307,17 @@ class EmbeddingUI:
         return "No VDB selected"
 
     def upload_data(self, file):
-        # Assuming the file is a CSV file
-        return pd.read_csv(file)
+        try:
+            if file.name.endswith('csv'):
+                enco = detect_encoding(file.name)
+                df = pd.read_csv(file.name, encoding=enco)
+            elif file.name.endswith('xls') or file.name.endswith('xlsx'):
+                df = pd.read_excel(file.name)
+            else:
+                df = pd.DataFrame()
+        except Exception as e:
+            raise gr.Error(e)
+        return df
     
     def upload_embedded(self, file):
         # Assuming the file is a CSV file
@@ -265,7 +334,7 @@ class EmbeddingUI:
         model = factory.create(embedding_type, **embedding_args)
         return model
 
-    def _embed_dataframe(self, input_dataframe, model_name):
+    def _embed_dataframe(self, input_dataframe, key_field, value_field, model_name):
         # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
         # model = OpenAIEmbeddings(**model_settings[model_index])
 
@@ -279,8 +348,12 @@ class EmbeddingUI:
         
         return embedded_table, embedded_vectors
 
-    def embed_dataframe(self, input_dataframe, model_name):
-        _, embedded_vectors = self._embed_dataframe(input_dataframe, model_name)
+    def embed_dataframe(self, input_dataframe, key_field, value_field, model_name):
+        _, embedded_vectors = self._embed_dataframe(
+            input_dataframe,
+            key_field,
+            value_field,
+            model_name)
 
         # save embedded vectors to a temporary npy file
         temp_filename = tempfile.NamedTemporaryFile(suffix=".npy", delete=False).name
@@ -291,7 +364,7 @@ class EmbeddingUI:
     def import_data(self, vdb_type, 
                     pinecone_host, pinecone_api_key,
                     milvus_uri, milvus_token, milvus_collection_name,
-                    input_dataframe, embeddings, batch_size):
+                    input_dataframe, value_field, embeddings, batch_size):
         metadatas = [{input_dataframe.columns[1]: t} for t in input_dataframe.iloc[:, 1].tolist()]
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
             vectors = np.load(embeddings)
@@ -335,7 +408,10 @@ class EmbeddingUI:
         return "No VDB selected"
 
     def embed_import_dataframe(self,
-                               input_dataframe, model_name, 
+                               input_dataframe, 
+                               key_field,
+                               value_field,
+                               model_name, 
                                vdb_type,
                                pinecone_host, pinecone_api_key,
                                milvus_uri, milvus_token, milvus_collection_name,
@@ -344,6 +420,61 @@ class EmbeddingUI:
 
         # Don't update output dataframe, import the data directly
         return self.import_data(pinecone_host, pinecone_api_key, input_dataframe, embedded_vectors, batch_size)
+
+    def vdb_search(
+            self,
+            vdb_type,
+            pinecone_host,
+            pinecone_api_key,
+            milvus_uri,
+            milvus_token,
+            milvus_collection_name,
+            embedding
+    ):
+        # example of embedding: "[.1,.2,.5,...]"
+        # convert string embedding to a list of float
+        vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
+
+        if vdb_type == "Pinecone":
+            client = PineconeClient(pinecone_api_key)
+            index = client.Index(host=pinecone_host)
+            result = index.query(vector=vector, top_k = 3, include_metadata=True)
+            return result, ''
+        elif vdb_type == "Milvus":
+            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+            result = client.search(
+                collection_name=milvus_collection_name,
+                data=[vector],
+                limit=3
+            )
+            return result, ''
+        
+    def embed_search(
+            self,
+            model_name,
+            vdb_type,
+            pinecone_host,
+            pinecone_api_key,
+            milvus_uri,
+            milvus_token,
+            milvus_collection_name,
+            input_text
+    ):
+        # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
+        # model = OpenAIEmbeddings(**model_settings[model_index])
+
+        model = self._create_embedding_model(model_name)
+        embedding = model.embed_query(input_text)
+
+        return self.vdb_search(
+            vdb_type,
+            pinecone_host,
+            pinecone_api_key,
+            milvus_uri,
+            milvus_token,
+            milvus_collection_name,
+            embedding
+        )
 
     def cluster_dataframe(self, input_dataframe, embeddings_file, clusters):
         # csv = pd.read_csv(embeddings_file).iloc[:, 0].tolist()

@@ -241,33 +241,35 @@ class LangServeClientUI:
               progress=gr.Progress()):
         gr.Info('Batch processing started with Lang Server URL: {}'.format(langserver_url))
 
-        if langserver_url:
-            self.db_manager.append_message(LANGSERVE_URLS_TABLE, langserver_url)
+        try:
 
-        chain = RemoteRunnable(langserver_url)
+            if langserver_url:
+                self.db_manager.append_message(LANGSERVE_URLS_TABLE, langserver_url)
 
-        batch_message = _dataframe_to_batch_message(table_dataframe_input)
-        messages = eval(batch_message)
-        selected_messages = messages[int(batch_start):int(batch_end)]
+            chain = RemoteRunnable(langserver_url)
 
-        progress((0, len(selected_messages)), desc="Starting...")
+            batch_message = _dataframe_to_batch_message(table_dataframe_input)
+            messages = eval(batch_message)
+            selected_messages = messages[int(batch_start):int(batch_end)]
 
-        results = []
-        for i in range(0, len(selected_messages), int(batch_len)):
-            try:
+            progress((0, len(selected_messages)), desc="Starting...")
+
+            results = []
+            for i in range(0, len(selected_messages), int(batch_len)):
                 batch = selected_messages[i:i+int(batch_len)]
                 result = chain.batch(batch)
                 results.extend(result)
                 progress((i+batch_len, len(selected_messages)), desc="Processing...")
-            except Exception as e:
-                raise gr.Error("Error: {} at batch {}".format(e, i))
 
-        progress((len(selected_messages), len(selected_messages)), desc="Completed")
+            progress((len(selected_messages), len(selected_messages)), desc="Completed")
 
-        # merge selected messages with results
-        selected_messages_pd = pd.DataFrame(selected_messages)
-        results_pd = pd.DataFrame(results, columns=['output'])
-        df = pd.concat([selected_messages_pd, results_pd], axis=1)
+            # merge selected messages with results
+            selected_messages_pd = pd.DataFrame(selected_messages)
+            results_pd = pd.DataFrame(results, columns=['output'])
+            df = pd.concat([selected_messages_pd, results_pd], axis=1)
+
+        except Exception as e:
+            raise gr.Error("Error: {} at batch {}".format(e, i))
 
         return gr.update(value=df)
 

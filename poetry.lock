@@ -206,6 +206,18 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "bson"
+version = "0.5.10"
+description = "BSON codec for Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+python-dateutil = ">=2.4.0"
+six = ">=1.9.0"
+
+[[package]]
 name = "certifi"
 version = "2024.2.2"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -1953,7 +1965,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "a637e52d2c79eaffdf1d98a31673fd19afce9ab59d5cb4d2b2f076e7087c497f"
+content-hash = "24b9d3cf63ca3970f66c8cc1d54ddadd301c34a3011ad17205962a7164fef112"
 
 [metadata.files]
 aiofiles = []
@@ -1971,6 +1983,7 @@ attrs = []
 azure-core = []
 azure-storage-blob = []
 backcall = []
+bson = []
 certifi = []
 cffi = []
 chardet = []
