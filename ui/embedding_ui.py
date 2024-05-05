@@ -116,7 +116,11 @@ class EmbeddingUI:
                         self.input_dataframe = gr.Dataframe()
                         with gr.Row():
                             self.key_field = gr.Textbox(label="Key Field", value="id")
-                            self.value_field = gr.Textbox(label="Value Field", value="text")
+                            self.value_fields = gr.Textbox(
+                                label="Value Fields",
+                                placeholder="field1, field2, ...",
+                                value="text"
+                            )
 
                         with gr.Tab("Embedding"):
                             with gr.Row():
@@ -180,7 +184,7 @@ class EmbeddingUI:
             )
             self.embed_dataframe_btn.click(
                 self.embed_dataframe,
-                [self.input_dataframe, self.key_field, self.value_field, self.model_name],
+                [self.input_dataframe, self.key_field, self.value_fields, self.model_name],
                 [self.file_embeddings]
             )
             self.import_data_btn.click(
@@ -193,7 +197,6 @@ class EmbeddingUI:
                     self.milvus_token,
                     self.milvus_collection_name,
                     self.input_dataframe,
-                    self.value_field,
                     self.file_embeddings,
                     self.importing_batch_size
                 ],
@@ -204,7 +207,7 @@ class EmbeddingUI:
                 [
                     self.input_dataframe,
                     self.key_field,
-                    self.value_field,
+                    self.value_fields,
                     self.model_name,
                     self.vdb_type,
                     self.pinecone_host,
@@ -334,37 +337,48 @@ class EmbeddingUI:
         model = factory.create(embedding_type, **embedding_args)
         return model
 
-    def _embed_dataframe(self, input_dataframe, key_field, value_field, model_name):
-        # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
-        # model = OpenAIEmbeddings(**model_settings[model_index])
-
+    def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name):
         model = self._create_embedding_model(model_name)
-    
-        embedded_vectors = model.embed_documents(input_dataframe.iloc[:, 0].tolist())
-        embedded_table = pd.concat(
-            [pd.DataFrame({'Vector': embedded_vectors}), input_dataframe.iloc[:, 1:]],
-            axis=1
-            )
-        
+
+        # split the value_fields into a list and remove any leading or trailing whitespaces
+        value_fields = [field.strip() for field in value_fields.split(",")]
+
+        embedded_vectors = []
+
+        key_column = input_dataframe[key_field]
+        # value_columns = input_dataframe[value_fields]
+
+        embedded_vectors = model.embed_documents(key_column.tolist())
+
+        # create a new dataframe with the embedded_vectors (string) as the firt column named `Vector`
+        embedded_table = pd.DataFrame({"Vector": embedded_vectors})
+
+        # append value_fields to the right of the new dataframe
+        embedded_table = pd.concat([embedded_table, input_dataframe[value_fields]], axis=1)
+
         return embedded_table, embedded_vectors
 
-    def embed_dataframe(self, input_dataframe, key_field, value_field, model_name):
-        _, embedded_vectors = self._embed_dataframe(
-            input_dataframe,
-            key_field,
-            value_field,
-            model_name)
+    def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name):
+        try:
+            _, embedded_vectors = self._embed_dataframe(
+                input_dataframe,
+                key_field,
+                value_fields,
+                model_name)
 
-        # save embedded vectors to a temporary npy file
-        temp_filename = tempfile.NamedTemporaryFile(suffix=".npy", delete=False).name
-        np.save(temp_filename, embedded_vectors)
+            # save embedded vectors to a temporary npy file
+            temp_filename = tempfile.NamedTemporaryFile(suffix=".npy", delete=False).name
+            np.save(temp_filename, embedded_vectors)
 
-        return temp_filename
+            return temp_filename
+        except Exception as e:
+            gr.Warning(f'Error: {e}')
+            return None        
  
     def import_data(self, vdb_type, 
                     pinecone_host, pinecone_api_key,
                     milvus_uri, milvus_token, milvus_collection_name,
-                    input_dataframe, value_field, embeddings, batch_size):
+                    input_dataframe, embeddings, batch_size):
         metadatas = [{input_dataframe.columns[1]: t} for t in input_dataframe.iloc[:, 1].tolist()]
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
             vectors = np.load(embeddings)
@@ -408,18 +422,27 @@ class EmbeddingUI:
         return "No VDB selected"
 
     def embed_import_dataframe(self,
-                               input_dataframe, 
+                               input_dataframe,
                                key_field,
-                               value_field,
-                               model_name, 
+                               value_fields,
+                               model_name,
                                vdb_type,
                                pinecone_host, pinecone_api_key,
                                milvus_uri, milvus_token, milvus_collection_name,
                                batch_size):
-        _, embedded_vectors = self._embed_dataframe(input_dataframe, model_name)
+        _, embedded_vectors = self._embed_dataframe(
+            input_dataframe,
+            key_field, value_fields,
+            model_name
+        )
 
         # Don't update output dataframe, import the data directly
-        return self.import_data(pinecone_host, pinecone_api_key, input_dataframe, embedded_vectors, batch_size)
+        return self.import_data(
+            vdb_type,
+            pinecone_host, pinecone_api_key,
+            milvus_uri, milvus_token, milvus_collection_name,
+            input_dataframe, embedded_vectors, batch_size
+        )
 
     def vdb_search(
             self,
