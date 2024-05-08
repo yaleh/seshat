@@ -190,17 +190,21 @@ class LangServeClientUI:
         )
 
     def invoke(self, message, langserver_url):
-        if message:
-            self.db_manager.append_message(LANGSERVE_MESSAGES_TABLE, message)
-        if langserver_url:
-            self.db_manager.append_message(LANGSERVE_URLS_TABLE, langserver_url)
+        try:
+            if message:
+                self.db_manager.append_message(LANGSERVE_MESSAGES_TABLE, message)
+            if langserver_url:
+                self.db_manager.append_message(LANGSERVE_URLS_TABLE, langserver_url)
 
-        message_dict = eval(message)
+            message_dict = eval(message)
 
-        chain = RemoteRunnable(langserver_url)
-        output = chain.invoke(message_dict)
+            chain = RemoteRunnable(langserver_url)
+            output = chain.invoke(message_dict)
 
-        return gr.update(value=output)
+            return gr.update(value=output)
+        except Exception as e:
+            gr.Warning(f'Error: {e}')
+            return None
     
     def update_histories(self):
         messages = gr.update(

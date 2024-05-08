@@ -91,8 +91,9 @@ class EmbeddingUI:
                             placeholder="VDB Index Description",
                             interactive=False
                         )
-                        with gr.Row():
+                        with gr.Tab('General'):
                             self.refresh_vdb_btn = gr.Button(value="Refresh", variant='primary')
+                        with gr.Tab('Advanced'):
                             self.clear_vdb_btn = gr.Button(value="Clear VDB", variant='danger')
 
                     self.importing_batch_size = gr.Slider(
@@ -126,6 +127,7 @@ class EmbeddingUI:
                             with gr.Row():
                                 self.embed_dataframe_btn = gr.Button(value="Embed Dataframe", variant='primary')
                                 self.embed_import_btn = gr.Button(value="Embed and Import Data", variant='primary')
+
                         with gr.Tab("Clustering"):
                             with gr.Row():
                                 self.clusters = gr.Number(label="Clusters", value=10)
@@ -142,23 +144,53 @@ class EmbeddingUI:
                             show_copy_button=True,
                             interactive=False
                             )
-                        self.embed_text_btn = gr.Button(value="Embed", variant='primary')
-
-                        self.vdb_search_output = gr.Textbox(
-                            label="VDB Search Output", 
-                            placeholder="VDB Search Output",
-                            show_copy_button=True,
-                            interactive=False
-                        )
-                        self.vdb_search_meta = gr.Textbox(
-                            label="VDB Search Meta", 
-                            placeholder="VDB Search Meta",
-                            show_copy_button=True,
-                            interactive=False
-                        )
                         with gr.Row():
-                            self.vdb_search_btn = gr.Button(value="Search VDB", variant='primary')
-                            self.embed_search_btn = gr.Button(value="Embed and Search VDB", variant='primary')
+                            self.embed_text_btn = gr.Button(value="Embed", variant='primary')
+                            self.clear_text_embedding_btn = gr.ClearButton(
+                                [self.output_embedding],
+                                value="Clear Tex Embedding"
+                            )
+
+                        with gr.Tab("Search"):
+                            self.vdb_search_output = gr.Textbox(
+                                label="VDB Search Output", 
+                                placeholder="VDB Search Output",
+                                show_copy_button=True,
+                                interactive=False
+                            )
+                            self.vdb_search_meta = gr.Textbox(
+                                label="VDB Search Meta", 
+                                placeholder="VDB Search Meta",
+                                show_copy_button=True,
+                                interactive=False
+                            )
+                            with gr.Row():
+                                self.vdb_search_k_number = gr.Number(label="Top K", value=3)
+                                self.vdb_search_btn = gr.Button(value="Search VDB", variant='primary')
+                                self.embed_search_btn = gr.Button(value="Embed and Search VDB", variant='primary')
+                                self.clear_text_all_btn = gr.ClearButton(
+                                    [self.input_text, self.output_embedding, self.vdb_search_output, self.vdb_search_meta],
+                                    value="Clear All"
+                                )
+
+                        with gr.Tab("Upsert"):
+                            self.upsert_text = gr.TextArea(
+                                label="Upsert Text",
+                                placeholder="Upsert Text",
+                                show_copy_button=True,
+                                interactive=True
+                            )
+                            with gr.Row():
+                                self.upsert_text_btn = gr.Button(value="Upsert", variant='primary')
+                                self.overwrite_checkbox = gr.Checkbox(label="Overwrite", value=False)
+
+                        with gr.Tab("Delete"):
+                            self.id_to_delete_text = gr.Textbox(
+                                label="ID to Delete",
+                                placeholder="ID to Delete",
+                                interactive=True
+                            )
+                            self.delete_text_btn = gr.Button(value="Delete", variant='danger')
 
             self.pinecone_tab.select(self.select_vdb_tab, [], [self.vdb_type])
             self.milvus_tab.select(self.select_vdb_tab, [], [self.vdb_type])
@@ -171,16 +203,16 @@ class EmbeddingUI:
                 [self.vdb_index_description]
             )
             self.clear_vdb_btn.click(
-                self.clear_vdb, 
+                self.clear_vdb,
                 [self.vdb_type,
                  self.pinecone_host, self.pinecone_api_key,
                  self.milvus_uri, self.milvus_token, self.milvus_collection_name],
                 [self.vdb_index_description]
             )
             self.file_table.upload(
-                self.upload_data, 
-                [self.file_table], 
-                [self.input_dataframe]
+                self.upload_data,
+                [self.file_table],
+                [self.input_dataframe, self.key_field, self.value_fields]
             )
             self.embed_dataframe_btn.click(
                 self.embed_dataframe,
@@ -240,7 +272,8 @@ class EmbeddingUI:
                     self.milvus_uri,
                     self.milvus_token,
                     self.milvus_collection_name,
-                    self.output_embedding
+                    self.output_embedding,
+                    self.vdb_search_k_number
                 ],
                 [self.vdb_search_output, self.vdb_search_meta]
             )
@@ -257,6 +290,34 @@ class EmbeddingUI:
                     self.input_text
                 ],
                 [self.vdb_search_output, self.vdb_search_meta]
+            )
+            self.upsert_text_btn.click(
+                self.upsert_embeded_text,
+                [
+                    self.output_embedding, 
+                    self.upsert_text, 
+                    self.overwrite_checkbox,
+                    self.vdb_type,
+                    self.pinecone_host,
+                    self.pinecone_api_key,
+                    self.milvus_uri,
+                    self.milvus_token,
+                    self.milvus_collection_name
+                ],
+                [self.vdb_index_description]
+            )
+            self.delete_text_btn.click(
+                self.delete_embedded_text,
+                [
+                    self.id_to_delete_text,
+                    self.vdb_type,
+                    self.pinecone_host,
+                    self.pinecone_api_key,
+                    self.milvus_uri,
+                    self.milvus_token,
+                    self.milvus_collection_name
+                ],
+                [self.vdb_index_description]
             )
 
         return block
@@ -318,9 +379,13 @@ class EmbeddingUI:
                 df = pd.read_excel(file.name)
             else:
                 df = pd.DataFrame()
+
+            # get the name of the first column
+            key_field = df.columns[0] if len(df.columns) > 0 else "id"
+            value_fields = ", ".join(df.columns[1:]) if len(df.columns) > 1 else "text"
         except Exception as e:
             raise gr.Error(e)
-        return df
+        return df, key_field, value_fields
     
     def upload_embedded(self, file):
         # Assuming the file is a CSV file
@@ -420,6 +485,50 @@ class EmbeddingUI:
             return client.get_collection_stats(milvus_collection_name)
                     
         return "No VDB selected"
+    
+    def upsert_embeded_text(
+            self, embedding, upsert_text, overwrite,
+            vdb_type, 
+            pinecone_host, pinecone_api_key,
+            milvus_uri, milvus_token, milvus_collection_name
+            ):
+        # convert embedding to a list of float
+        vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
+
+        if vdb_type == "Pinecone":
+            client = PineconeClient(pinecone_api_key)
+            index = client.Index(host=pinecone_host)
+
+            index.upsert(vectors=[(str(uuid.uuid4()), vector, {"text": upsert_text})], overwrite=overwrite)
+            gr.Info("Data upserted successfully")
+            return index.describe_index_stats().to_str()
+        elif vdb_type == "Milvus":
+            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+
+            data = [{"vector": vector, "text": upsert_text}]
+            client.insert(milvus_collection_name, data)
+            gr.Info("Data upserted successfully")
+            return client.get_collection_stats(milvus_collection_name)
+
+    def delete_embedded_text(
+            self, id_to_delete_text,
+            vdb_type,
+            pinecone_host, pinecone_api_key,
+            milvus_uri, milvus_token, milvus_collection_name
+            ):
+        if vdb_type == "Pinecone":
+            client = PineconeClient(pinecone_api_key)
+            index = client.Index(host=pinecone_host)
+
+            index.delete(ids=[id_to_delete_text])
+            gr.Info("Data deleted successfully")
+            return index.describe_index_stats().to_str()
+        elif vdb_type == "Milvus":
+            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+
+            client.delete(milvus_collection_name, [id_to_delete_text])
+            gr.Info("Data deleted successfully")
+            return client.get_collection_stats(milvus_collection_name)
 
     def embed_import_dataframe(self,
                                input_dataframe,
@@ -452,7 +561,8 @@ class EmbeddingUI:
             milvus_uri,
             milvus_token,
             milvus_collection_name,
-            embedding
+            embedding,
+            k
     ):
         # example of embedding: "[.1,.2,.5,...]"
         # convert string embedding to a list of float
@@ -461,7 +571,7 @@ class EmbeddingUI:
         if vdb_type == "Pinecone":
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
-            result = index.query(vector=vector, top_k = 3, include_metadata=True)
+            result = index.query(vector=vector, top_k = k, include_metadata=True)
             return result, ''
         elif vdb_type == "Milvus":
             client = MilvusClient(uri=milvus_uri, token=milvus_token)
