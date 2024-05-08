@@ -216,7 +216,7 @@ class EmbeddingUI:
             )
             self.embed_dataframe_btn.click(
                 self.embed_dataframe,
-                [self.input_dataframe, self.key_field, self.value_fields, self.model_name],
+                [self.input_dataframe, self.key_field, self.value_fields, self.model_name, self.importing_batch_size],
                 [self.file_embeddings]
             )
             self.import_data_btn.click(
@@ -402,7 +402,7 @@ class EmbeddingUI:
         model = factory.create(embedding_type, **embedding_args)
         return model
 
-    def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name):
+    def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, batch_size):
         model = self._create_embedding_model(model_name)
 
         # split the value_fields into a list and remove any leading or trailing whitespaces
@@ -413,7 +413,11 @@ class EmbeddingUI:
         key_column = input_dataframe[key_field]
         # value_columns = input_dataframe[value_fields]
 
-        embedded_vectors = model.embed_documents(key_column.tolist())
+        embedded_vectors = []
+        for i in range(0, len(key_column), batch_size):
+            batch_keys = key_column[i:i+batch_size]
+            batch_vectors = model.embed_documents(batch_keys.tolist())
+            embedded_vectors.extend(batch_vectors)
 
         # create a new dataframe with the embedded_vectors (string) as the firt column named `Vector`
         embedded_table = pd.DataFrame({"Vector": embedded_vectors})
@@ -423,13 +427,15 @@ class EmbeddingUI:
 
         return embedded_table, embedded_vectors
 
-    def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name):
+    def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, batch_size):
         try:
             _, embedded_vectors = self._embed_dataframe(
                 input_dataframe,
                 key_field,
                 value_fields,
-                model_name)
+                model_name,
+                batch_size
+                )
 
             # save embedded vectors to a temporary npy file
             temp_filename = tempfile.NamedTemporaryFile(suffix=".npy", delete=False).name
@@ -578,6 +584,7 @@ class EmbeddingUI:
             result = client.search(
                 collection_name=milvus_collection_name,
                 data=[vector],
+                output_fields=["text"],
                 limit=3
             )
             return result, ''

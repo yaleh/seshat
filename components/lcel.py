@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 from langchain.llms.huggingface_hub import HuggingFaceHub
 from langchain.llms.replicate import Replicate
 from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceHubEmbeddings
 from langserve import RemoteRunnable
 
 class LLMModelFactory:

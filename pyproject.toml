@@ -21,6 +21,8 @@ langchain-community = "^0.0.33"
 chardet = "^5.2.0"
 langserve = "^0.1.0"
 bson = "^0.5.10"
+gunicorn = "^22.0.0"
+huggingface-hub = "^0.23.0"
 
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.29.4"
