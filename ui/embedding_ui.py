@@ -4,6 +4,7 @@ import pandas as pd
 import tempfile
 import uuid
 import ast
+import json
 from pinecone import Pinecone as PineconeClient
 from sklearn.cluster import SpectralClustering
 from pymilvus import MilvusClient
@@ -365,11 +366,14 @@ class EmbeddingUI:
             # get all ids
             ids = client.query(milvus_collection_name, filter="id >= 0", output_fields=["id"])
             # ids looks like "[{'id': 0}, {'id': 1}, ...]"
-            ids = [int(id['id']) for id in ids]
-            # delete all ids
-            client.delete(milvus_collection_name, ids)
+            if ids is not None and len(ids) > 0:
+                ids = [int(id['id']) for id in ids]
+                # delete all ids
+                client.delete(milvus_collection_name, ids)
 
-            gr.Info("VDB index cleared successfully")
+                gr.Info("VDB index cleared successfully")
+            else:
+                gr.Info("No data to delete")
             return client.get_collection_stats(milvus_collection_name)
         
         return "No VDB selected"
@@ -590,16 +594,19 @@ class EmbeddingUI:
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
             result = index.query(vector=vector, top_k = k, include_metadata=True)
-            return result, ''
+
         elif vdb_type == "Milvus":
             client = MilvusClient(uri=milvus_uri, token=milvus_token)
             result = client.search(
                 collection_name=milvus_collection_name,
                 data=[vector],
                 output_fields=["text"],
-                limit=3
+                limit=k
             )
-            return result, ''
+            
+        # beautify the json result
+        result = json.dumps(result, indent=4, ensure_ascii=False).encode('utf8').decode()
+        return result, ''
         
     def embed_search(
             self,
