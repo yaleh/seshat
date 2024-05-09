@@ -7,7 +7,7 @@ authors = ["Yale Huang <calvino.huang@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.10"
 confz = "2.0.1"
-gradio = "^4.26.0"
+gradio = "4.29.0"
 ipython = "8.12.3"
 langchain = "0.1.14"
 openai = "1.16.2"

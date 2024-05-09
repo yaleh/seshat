@@ -114,7 +114,9 @@ class EmbeddingUI:
                 with gr.Column(scale=2):
                     # Add a Gradio Dataframe and a Gradio File component
                     with gr.Tab("Table"):
-                        self.input_dataframe = gr.Dataframe()
+                        self.input_dataframe = gr.Dataframe(
+                            interactive=False
+                        )
                         with gr.Row():
                             self.key_field = gr.Textbox(label="Key Field", value="id")
                             self.value_fields = gr.Textbox(
@@ -229,6 +231,7 @@ class EmbeddingUI:
                     self.milvus_token,
                     self.milvus_collection_name,
                     self.input_dataframe,
+                    self.value_fields,
                     self.file_embeddings,
                     self.importing_batch_size
                 ],
@@ -287,7 +290,8 @@ class EmbeddingUI:
                     self.milvus_uri,
                     self.milvus_token,
                     self.milvus_collection_name,
-                    self.input_text
+                    self.input_text,
+                    self.vdb_search_k_number
                 ],
                 [self.vdb_search_output, self.vdb_search_meta]
             )
@@ -402,7 +406,8 @@ class EmbeddingUI:
         model = factory.create(embedding_type, **embedding_args)
         return model
 
-    def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, batch_size):
+    def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, 
+                         batch_size):
         model = self._create_embedding_model(model_name)
 
         # split the value_fields into a list and remove any leading or trailing whitespaces
@@ -429,6 +434,8 @@ class EmbeddingUI:
 
     def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, batch_size):
         try:
+            # only vectors are saved
+            # embedded_table is dropped
             _, embedded_vectors = self._embed_dataframe(
                 input_dataframe,
                 key_field,
@@ -449,8 +456,9 @@ class EmbeddingUI:
     def import_data(self, vdb_type, 
                     pinecone_host, pinecone_api_key,
                     milvus_uri, milvus_token, milvus_collection_name,
-                    input_dataframe, embeddings, batch_size):
-        metadatas = [{input_dataframe.columns[1]: t} for t in input_dataframe.iloc[:, 1].tolist()]
+                    input_dataframe, value_fields, embeddings, batch_size):
+        value_fields = [field.strip() for field in value_fields.split(",")]
+        metadatas = input_dataframe[value_fields].to_dict(orient='records')
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
             vectors = np.load(embeddings)
         else:
@@ -461,12 +469,12 @@ class EmbeddingUI:
             gr.Warning("The number of vectors and metadatas should be the same")
             return "The number of vectors and metadatas should be the same"
 
-        ids = [str(uuid.uuid4()) for _ in vectors]
-        vector_list = list(zip(ids, vectors, metadatas))
-
-        batched_vectors = [vector_list[i:i+batch_size] for i in range(0, len(vector_list), batch_size)]
-
         if vdb_type == "Pinecone":
+            ids = [str(uuid.uuid4()) for _ in vectors]
+            vector_list = list(zip(ids, vectors, metadatas))
+
+            batched_vectors = [vector_list[i:i+batch_size] for i in range(0, len(vector_list), batch_size)]
+
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host = pinecone_host)            
 
@@ -483,10 +491,12 @@ class EmbeddingUI:
             gr.Info("Data imported successfully")
             return index.describe_index_stats().to_str()
         elif vdb_type == "Milvus":
+            # vectors is a arry like [[0.3580376395471989, ...], ...]
+            # metadatas is a list of dictionaries like [{"text": "pink_8682"},...]
+            # create vector_list like [{"vector": [0.3580376395471989, ...], "text": "pink_8682"},...]
+            vector_list = [{"vector": vector, **{field: metadata[field] for field in value_fields}} for vector, metadata in zip(vectors, metadatas)]
             client = MilvusClient(uri=milvus_uri, token=milvus_token)
-            # convert vector_list to data like: [{"pk": 0, "vector": [0.3580376395471989, ...], "text": "pink_8682"},...]
-            data = [{"vector": vector, "text": metadata[input_dataframe.columns[1]]} for i, (_, vector, metadata) in enumerate(vector_list)]
-            client.insert(milvus_collection_name, data)
+            client.insert(milvus_collection_name, vector_list)
             gr.Info("Data imported successfully")
             return client.get_collection_stats(milvus_collection_name)
                     
@@ -547,8 +557,10 @@ class EmbeddingUI:
                                batch_size):
         _, embedded_vectors = self._embed_dataframe(
             input_dataframe,
-            key_field, value_fields,
-            model_name
+            key_field,
+            value_fields,
+            model_name,
+            batch_size
         )
 
         # Don't update output dataframe, import the data directly
@@ -556,7 +568,7 @@ class EmbeddingUI:
             vdb_type,
             pinecone_host, pinecone_api_key,
             milvus_uri, milvus_token, milvus_collection_name,
-            input_dataframe, embedded_vectors, batch_size
+            input_dataframe, value_fields, embedded_vectors, batch_size
         )
 
     def vdb_search(
@@ -598,7 +610,8 @@ class EmbeddingUI:
             milvus_uri,
             milvus_token,
             milvus_collection_name,
-            input_text
+            input_text,
+            k
     ):
         # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
         # model = OpenAIEmbeddings(**model_settings[model_index])
@@ -613,7 +626,8 @@ class EmbeddingUI:
             milvus_uri,
             milvus_token,
             milvus_collection_name,
-            embedding
+            embedding,
+            k
         )
 
     def cluster_dataframe(self, input_dataframe, embeddings_file, clusters):
