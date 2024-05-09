@@ -97,11 +97,6 @@ class EmbeddingUI:
                         with gr.Tab('Advanced'):
                             self.clear_vdb_btn = gr.Button(value="Clear VDB", variant='danger')
 
-                    self.importing_batch_size = gr.Slider(
-                        1, 100, value=20, label="Importing Batch Size",
-                        info="The number of vectors to import in each batch"
-                    )
-
                     with gr.Row():
                         self.file_table = gr.File(label="Table Data")
 
@@ -125,6 +120,14 @@ class EmbeddingUI:
                                 placeholder="field1, field2, ...",
                                 value="text"
                             )
+                        with gr.Row():
+                            self.batch_start = gr.Number(label="Start", value=0, minimum=0, precision=0)
+                            self.batch_end = gr.Number(label="End (excluded)", value=0, minimum=0, precision=0)
+                            self.batch_size = gr.Number(
+                                label="Batch Size",
+                                value=1, minimum=0, precision=0,
+                                info="Batch for embedding/importing"
+                                )
 
                         with gr.Tab("Embedding"):
                             with gr.Row():
@@ -215,11 +218,26 @@ class EmbeddingUI:
             self.file_table.upload(
                 self.upload_data,
                 [self.file_table],
-                [self.input_dataframe, self.key_field, self.value_fields]
+                [
+                    self.input_dataframe,
+                    self.key_field,
+                    self.value_fields,
+                    self.batch_start,
+                    self.batch_end,
+                    self.batch_size
+                ]
             )
             self.embed_dataframe_btn.click(
                 self.embed_dataframe,
-                [self.input_dataframe, self.key_field, self.value_fields, self.model_name, self.importing_batch_size],
+                [
+                    self.input_dataframe, 
+                    self.key_field, 
+                    self.value_fields,
+                    self.model_name,
+                    self.batch_start,
+                    self.batch_end,
+                    self.batch_size
+                ],
                 [self.file_embeddings]
             )
             self.import_data_btn.click(
@@ -234,7 +252,9 @@ class EmbeddingUI:
                     self.input_dataframe,
                     self.value_fields,
                     self.file_embeddings,
-                    self.importing_batch_size
+                    self.batch_start,
+                    self.batch_end,
+                    self.batch_size
                 ],
                 [self.vdb_index_description]
             )
@@ -251,7 +271,9 @@ class EmbeddingUI:
                     self.milvus_uri,
                     self.milvus_token,
                     self.milvus_collection_name,
-                    self.importing_batch_size
+                    self.batch_start,
+                    self.batch_end,
+                    self.batch_size
                 ],
                 [self.vdb_index_description]
             )
@@ -391,9 +413,17 @@ class EmbeddingUI:
             # get the name of the first column
             key_field = df.columns[0] if len(df.columns) > 0 else "id"
             value_fields = ", ".join(df.columns[1:]) if len(df.columns) > 1 else "text"
+
+            # get the rows number
+            rows = len(df)
         except Exception as e:
             raise gr.Error(e)
-        return df, key_field, value_fields
+        return (
+            df, key_field, value_fields,
+            gr.update(value=0, minimum=0, maximum=rows),
+            gr.update(value=rows, minimum=0, maximum=rows),
+            gr.update(value=1, minimum=0, maximum=rows)
+        )
     
     def upload_embedded(self, file):
         # Assuming the file is a CSV file
@@ -411,7 +441,7 @@ class EmbeddingUI:
         return model
 
     def _embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, 
-                         batch_size):
+                         start, end, batch_size):
         model = self._create_embedding_model(model_name)
 
         # split the value_fields into a list and remove any leading or trailing whitespaces
@@ -419,7 +449,7 @@ class EmbeddingUI:
 
         embedded_vectors = []
 
-        key_column = input_dataframe[key_field]
+        key_column = input_dataframe[key_field][start:end]
         # value_columns = input_dataframe[value_fields]
 
         embedded_vectors = []
@@ -432,11 +462,12 @@ class EmbeddingUI:
         embedded_table = pd.DataFrame({"Vector": embedded_vectors})
 
         # append value_fields to the right of the new dataframe
-        embedded_table = pd.concat([embedded_table, input_dataframe[value_fields]], axis=1)
+        embedded_table = pd.concat([embedded_table, input_dataframe[value_fields][start:end]], axis=1)
 
         return embedded_table, embedded_vectors
 
-    def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name, batch_size):
+    def embed_dataframe(self, input_dataframe, key_field, value_fields, model_name,
+                        start, end, batch_size):
         try:
             # only vectors are saved
             # embedded_table is dropped
@@ -445,6 +476,8 @@ class EmbeddingUI:
                 key_field,
                 value_fields,
                 model_name,
+                start,
+                end,
                 batch_size
                 )
 
@@ -460,9 +493,10 @@ class EmbeddingUI:
     def import_data(self, vdb_type, 
                     pinecone_host, pinecone_api_key,
                     milvus_uri, milvus_token, milvus_collection_name,
-                    input_dataframe, value_fields, embeddings, batch_size):
+                    input_dataframe, value_fields, embeddings,
+                    start, end, batch_size):
         value_fields = [field.strip() for field in value_fields.split(",")]
-        metadatas = input_dataframe[value_fields].to_dict(orient='records')
+        metadatas = input_dataframe[value_fields][start:end].to_dict(orient='records')
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
             vectors = np.load(embeddings)
         else:
@@ -558,12 +592,14 @@ class EmbeddingUI:
                                vdb_type,
                                pinecone_host, pinecone_api_key,
                                milvus_uri, milvus_token, milvus_collection_name,
-                               batch_size):
+                               start, end, batch_size):
         _, embedded_vectors = self._embed_dataframe(
             input_dataframe,
             key_field,
             value_fields,
             model_name,
+            start,
+            end,
             batch_size
         )
 
@@ -572,7 +608,8 @@ class EmbeddingUI:
             vdb_type,
             pinecone_host, pinecone_api_key,
             milvus_uri, milvus_token, milvus_collection_name,
-            input_dataframe, value_fields, embedded_vectors, batch_size
+            input_dataframe, value_fields, embedded_vectors,
+            start, end, batch_size
         )
 
     def vdb_search(
