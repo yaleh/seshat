@@ -485,19 +485,22 @@ class MetaPromptUI:
             self.testing_model_args.pop('temperature')
 
     def test_prompt(self, system_prompt, user_prompt):
-        # Create the prompt
-        prompt = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ]
-        gr.Info(f"testing LLM Service: {self.testing_model_service}, name: {self.testing_model_name}")
-        # Get the response from OpenAI
-        llm = self.model_factory.create_model(self.testing_model_type, 
-                                              self.testing_model_name, 
-                                              **self.testing_model_args)
-        gpt_response = llm.invoke(prompt)
-        # Return the output to be placed in the output textbox
-        return gpt_response.content
+        try:
+            # Create the prompt
+            prompt = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ]
+            gr.Info(f"testing LLM Service: {self.testing_model_service}, name: {self.testing_model_name}")
+            # Get the response from OpenAI
+            llm = self.model_factory.create_model(self.testing_model_type, 
+                                                self.testing_model_name, 
+                                                **self.testing_model_args)
+            gpt_response = llm.invoke(prompt)
+            # Return the output to be placed in the output textbox
+            return gpt_response.content
+        except Exception as e:
+            raise gr.Error(f"Error: {e}")
 
     def meta_prompt(self,
             meta_system_prompt,
@@ -528,26 +531,29 @@ class MetaPromptUI:
 {current_output}
 ```
 '''
-        # Create the prompt
-        prompt = [
-            SystemMessage(content=meta_system_prompt),
-            HumanMessage(content=user_message)
-        ]
-        gr.Info(f"generating LLM Service: {self.generating_model_service}, name: {self.generating_model_name}")
-        # Get the response from OpenAI
-        llm = self.model_factory.create_model(self.generating_model_type,
-                                              self.generating_model_name,
-                                              **self.generating_model_args)
-        gpt_response = llm.invoke(prompt)
+        try:
+            # Create the prompt
+            prompt = [
+                SystemMessage(content=meta_system_prompt),
+                HumanMessage(content=user_message)
+            ]
+            gr.Info(f"generating LLM Service: {self.generating_model_service}, name: {self.generating_model_name}")
+            # Get the response from OpenAI
+            llm = self.model_factory.create_model(self.generating_model_type,
+                                                self.generating_model_name,
+                                                **self.generating_model_args)
+            gpt_response = llm.invoke(prompt)
 
-        updated_prompt = self.extract_updated_prompt(gpt_response.content)
-        changed = not self.detect_no_change(gpt_response.content)
+            updated_prompt = self.extract_updated_prompt(gpt_response.content)
+            changed = not self.detect_no_change(gpt_response.content)
 
-        # Return the output to be placed in the new system prompt textbox
-        if updated_prompt:
-            return updated_prompt, changed
-        else:
-            return gpt_response.content, changed
+            # Return the output to be placed in the new system prompt textbox
+            if updated_prompt:
+                return updated_prompt, changed
+            else:
+                return gpt_response.content, changed
+        except Exception as e:
+            raise gr.Error(f"Error: {e}")
 
     def extract_updated_prompt(self, gpt_response):
         # Regular expression pattern to find the text enclosed

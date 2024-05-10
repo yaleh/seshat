@@ -11,6 +11,11 @@ from pymilvus import MilvusClient
 from components.lcel import EmbeddingFactory
 from tools.table_parser import TableParser
 from tools.utils import detect_encoding
+from db.db_sqlite3 import (
+    DatabaseManager, EMBEDDING_PINECONE_HOSTS_TABLE,
+    EMBEDDING_PINECONE_API_KEYS_TABLE, EMBEDDING_MILVUS_URIS_TABLE,
+    EMBEDDING_MILVUS_TOKENS_TABLE, EMBEDDING_MILVUS_COLLECTIONS_TABLE
+)
 
 # Define an array of model settings
 model_settings = [
@@ -44,8 +49,13 @@ class EmbeddingUI:
 
     def __init__(self, config=None):
         self.config = config
-        self.ui = self.init_ui()
 
+        self.db_manager = DatabaseManager(
+            self.config.server.message_db, 
+            self.config.server.max_message_length
+        )
+
+        self.ui = self.init_ui()
 
     def init_ui(self):
         with gr.Blocks() as block:
@@ -68,23 +78,41 @@ class EmbeddingUI:
                     self.milvus_tab = gr.Tab("Milvus")
 
                     with self.pinecone_tab:
-                        self.pinecone_host = gr.Textbox(
-                            label="Pinecone Host", placeholder="Pinecone Host"
+                        self.pinecone_host = gr.Dropdown(
+                            choices=self.db_manager.get_messages(EMBEDDING_PINECONE_HOSTS_TABLE),
+                            label="Pinecone Host",
+                            allow_custom_value=True,
+                            interactive=True
                         )
-                        self.pinecone_api_key = gr.Textbox(
-                            label="Pinecone API Key", placeholder="Pinecone API Key"
+                        self.pinecone_api_key = gr.Dropdown(
+                            choices=self.db_manager.get_messages(EMBEDDING_PINECONE_API_KEYS_TABLE),
+                            label="Pinecone API Key",
+                            allow_custom_value=True,
+                            interactive=True
                         )
 
                     with self.milvus_tab:
-                        self.milvus_uri = gr.Textbox(
-                            label="Milvus URI", placeholder="Milvus URI"
+                        self.milvus_uri = gr.Dropdown(
+                            choices=self.db_manager.get_messages(EMBEDDING_MILVUS_URIS_TABLE),
+                            label="Milvus URI",
+                            allow_custom_value=True,
+                            interactive=True
                         )
-                        self.milvus_token = gr.Textbox(
-                            label="Milvus Token", placeholder="Milvus Token"
+                        self.milvus_token = gr.Dropdown(
+                            choices=self.db_manager.get_messages(EMBEDDING_MILVUS_TOKENS_TABLE),
+                            label="Milvus Token",
+                            allow_custom_value=True,
+                            interactive=True
                         )
-                        self.milvus_collection_name = gr.Textbox(
-                            label="Milvus Collection Name", placeholder="Milvus Collection Name"
+                        self.milvus_collection_name = gr.Dropdown(
+                            choices=self.db_manager.get_messages(EMBEDDING_MILVUS_COLLECTIONS_TABLE),
+                            label="Milvus Collection Name",
+                            allow_custom_value=True,
+                            interactive=True
                         )
+
+                    self.reload_vdb_settings_btn = gr.Button(value="Reload VDB Settings",
+                                                             variant='secondary')
 
                     with gr.Group():
                         self.vdb_index_description = gr.Textbox(
@@ -201,6 +229,12 @@ class EmbeddingUI:
             self.pinecone_tab.select(self.select_vdb_tab, [], [self.vdb_type])
             self.milvus_tab.select(self.select_vdb_tab, [], [self.vdb_type])
 
+            self.reload_vdb_settings_btn.click(
+                self.reload_vdb_settings,
+                [],
+                [self.pinecone_host, self.pinecone_api_key, self.milvus_uri, self.milvus_token, self.milvus_collection_name]
+            )                
+
             self.refresh_vdb_btn.click(
                 self.refresh_vdb,
                 [self.vdb_type,
@@ -284,7 +318,7 @@ class EmbeddingUI:
             )
 
             self.embed_text_btn.click(
-                self.run_agent, 
+                self.embed_text, 
                 [self.input_text, self.model_name], 
                 [self.output_embedding]
             )
@@ -352,17 +386,56 @@ class EmbeddingUI:
     def select_vdb_tab(self, event: gr.SelectData):
         return str(event.value)            
     
-    def run_agent(self, input_text, model_name):
-        # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
-        # model = OpenAIEmbeddings(**model_settings[model_index])
+    def embed_text(self, input_text, model_name):
+        try:
+            model = self._create_embedding_model(model_name)
+            vector = model.embed_query(input_text)
+            # TODO: remove '[]' from the begining and end of the output
+            return vector
+        except Exception as e:
+            raise gr.Error(f'Error: {e}')
+        
+    def update_vdb_history_db(self, vdb_type, 
+                           pinecone_host, pinecone_api_key,
+                           milvus_uri, milvus_token, milvus_collection_name):
+        if vdb_type == "Pinecone":
+            self.db_manager.append_message(EMBEDDING_PINECONE_HOSTS_TABLE, pinecone_host)
+            self.db_manager.append_message(EMBEDDING_PINECONE_API_KEYS_TABLE, pinecone_api_key)
+        elif vdb_type == "Milvus":
+            self.db_manager.append_message(EMBEDDING_MILVUS_URIS_TABLE, milvus_uri)
+            self.db_manager.append_message(EMBEDDING_MILVUS_TOKENS_TABLE, milvus_token)
+            self.db_manager.append_message(EMBEDDING_MILVUS_COLLECTIONS_TABLE, milvus_collection_name)
 
-        model = self._create_embedding_model(model_name)
-        # TODO: remove '[]' from the begining and end of the output
-        return model.embed_query(input_text)
+    def reload_vdb_settings(self):
+        return (
+            gr.update(
+                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_HOSTS_TABLE) or None,
+                interactive=True
+            ),
+            gr.update(
+                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_API_KEYS_TABLE) or None,
+                interactive=True
+            ),
+            gr.update(
+                value=self.db_manager.get_messages(EMBEDDING_MILVUS_URIS_TABLE) or None,
+                interactive=True
+            ),
+            gr.update(
+                value=self.db_manager.get_messages(EMBEDDING_MILVUS_TOKENS_TABLE) or None,
+                interactive=True
+            ),
+            gr.update(
+                value=self.db_manager.get_messages(EMBEDDING_MILVUS_COLLECTIONS_TABLE) or None,
+                interactive=True
+            )
+        )
 
     def refresh_vdb(self, vdb_type, 
                     pinecone_host, pinecone_api_key,
                     milvus_uri, milvus_token, milvus_collection_name):
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
         if vdb_type == "Pinecone":
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
@@ -376,6 +449,9 @@ class EmbeddingUI:
     def clear_vdb(self, vdb_type,
                   pinecone_host, pinecone_api_key,
                   milvus_uri, milvus_token, milvus_collection_name):
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
         if vdb_type == "Pinecone":
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
@@ -495,6 +571,9 @@ class EmbeddingUI:
                     milvus_uri, milvus_token, milvus_collection_name,
                     input_dataframe, value_fields, embeddings,
                     start, end, batch_size):
+        self.update_vdb_history_db(vdb_type, 
+                        pinecone_host, pinecone_api_key,
+                        milvus_uri, milvus_token, milvus_collection_name)
         value_fields = [field.strip() for field in value_fields.split(",")]
         metadatas = input_dataframe[value_fields][start:end].to_dict(orient='records')
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
@@ -546,6 +625,9 @@ class EmbeddingUI:
             pinecone_host, pinecone_api_key,
             milvus_uri, milvus_token, milvus_collection_name
             ):
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
         # convert embedding to a list of float
         vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
 
@@ -570,6 +652,9 @@ class EmbeddingUI:
             pinecone_host, pinecone_api_key,
             milvus_uri, milvus_token, milvus_collection_name
             ):
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
         if vdb_type == "Pinecone":
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
@@ -593,6 +678,9 @@ class EmbeddingUI:
                                pinecone_host, pinecone_api_key,
                                milvus_uri, milvus_token, milvus_collection_name,
                                start, end, batch_size):
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
         _, embedded_vectors = self._embed_dataframe(
             input_dataframe,
             key_field,
@@ -623,27 +711,31 @@ class EmbeddingUI:
             embedding,
             k
     ):
-        # example of embedding: "[.1,.2,.5,...]"
-        # convert string embedding to a list of float
-        vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
+        self.update_vdb_history_db(vdb_type, 
+                                pinecone_host, pinecone_api_key,
+                                milvus_uri, milvus_token, milvus_collection_name)
+        try:
+            vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
 
-        if vdb_type == "Pinecone":
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host=pinecone_host)
-            result = index.query(vector=vector, top_k = k, include_metadata=True)
-            result = result.to_str()
+            if vdb_type == "Pinecone":
+                client = PineconeClient(pinecone_api_key)
+                index = client.Index(host=pinecone_host)
+                result = index.query(vector=vector, top_k = k, include_metadata=True)
+                result = result.to_str()
 
-        elif vdb_type == "Milvus":
-            client = MilvusClient(uri=milvus_uri, token=milvus_token)
-            result = client.search(
-                collection_name=milvus_collection_name,
-                data=[vector],
-                output_fields=["text"],
-                limit=k
-            )
-            # beautify the json result
-            result = json.dumps(result, indent=4, ensure_ascii=False).encode('utf8').decode()
-            
+            elif vdb_type == "Milvus":
+                client = MilvusClient(uri=milvus_uri, token=milvus_token)
+                result = client.search(
+                    collection_name=milvus_collection_name,
+                    data=[vector],
+                    output_fields=["text"],
+                    limit=k
+                )
+                # beautify the json result
+                result = json.dumps(result, indent=4, ensure_ascii=False).encode('utf8').decode()
+        except Exception as e:
+            raise gr.Error(f'Error: {e}')
+                    
         return result, ''
         
     def embed_search(
@@ -658,22 +750,22 @@ class EmbeddingUI:
             input_text,
             k
     ):
-        # model_index = next((index for index, setting in enumerate(model_settings) if setting['model'] == model_name), 0)
-        # model = OpenAIEmbeddings(**model_settings[model_index])
+        try:
+            model = self._create_embedding_model(model_name)
+            embedding = model.embed_query(input_text)
 
-        model = self._create_embedding_model(model_name)
-        embedding = model.embed_query(input_text)
-
-        return self.vdb_search(
-            vdb_type,
-            pinecone_host,
-            pinecone_api_key,
-            milvus_uri,
-            milvus_token,
-            milvus_collection_name,
-            embedding,
-            k
-        )
+            return self.vdb_search(
+                vdb_type,
+                pinecone_host,
+                pinecone_api_key,
+                milvus_uri,
+                milvus_token,
+                milvus_collection_name,
+                embedding,
+                k
+            )
+        except Exception as e:
+            raise gr.Error(f'Error: {e}')
 
     def cluster_dataframe(self, input_dataframe, embeddings_file, clusters):
         # csv = pd.read_csv(embeddings_file).iloc[:, 0].tolist()

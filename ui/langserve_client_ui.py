@@ -181,7 +181,7 @@ class LangServeClientUI:
         self.output_dataframe.change(
             self.update_output_files,
             [self.output_dataframe],
-            [self.output_file]
+            [self.output_file, self.langserve_url]
         )
         self.input_dataframe.change(
             self.update_input_rows,
@@ -203,8 +203,7 @@ class LangServeClientUI:
 
             return gr.update(value=output)
         except Exception as e:
-            gr.Warning(f'Error: {e}')
-            return None
+            raise gr.Error(f'Error: {e}')
     
     def update_histories(self):
         messages = gr.update(
@@ -287,15 +286,20 @@ class LangServeClientUI:
         return gr.update(value=filenames, visible=True)
     
     def update_output_files(self, df):
+        urls = gr.update(
+            choices=self.db_manager.get_messages(LANGSERVE_URLS_TABLE),
+            interactive=True
+        )
+
         # clear output if df is empty
         if df.shape[0] <= 1:
-            return gr.update(value=None)
+            return gr.update(value=None), urls
 
         file_types = ['csv', 'xlsx']
         filenames = _dump_dataframe(df, file_types)
 
-        return gr.update(value=filenames, visible=True)
-    
+        return gr.update(value=filenames, visible=True), urls
+
     def update_input_rows(self, df):
         df_size = len(df)
         return (
