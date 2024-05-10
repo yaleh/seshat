@@ -88,7 +88,7 @@ class EmbeddingUI:
 
                     with gr.Group():
                         self.vdb_index_description = gr.Textbox(
-                            label="VDB Index Description", 
+                            label="VDB Index Description",
                             placeholder="VDB Index Description",
                             interactive=False
                         )
