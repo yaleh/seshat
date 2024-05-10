@@ -631,6 +631,7 @@ class EmbeddingUI:
             client = PineconeClient(pinecone_api_key)
             index = client.Index(host=pinecone_host)
             result = index.query(vector=vector, top_k = k, include_metadata=True)
+            result = result.to_str()
 
         elif vdb_type == "Milvus":
             client = MilvusClient(uri=milvus_uri, token=milvus_token)
@@ -640,9 +641,9 @@ class EmbeddingUI:
                 output_fields=["text"],
                 limit=k
             )
+            # beautify the json result
+            result = json.dumps(result, indent=4, ensure_ascii=False).encode('utf8').decode()
             
-        # beautify the json result
-        result = json.dumps(result, indent=4, ensure_ascii=False).encode('utf8').decode()
         return result, ''
         
     def embed_search(
