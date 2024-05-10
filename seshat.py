@@ -25,7 +25,7 @@ class ChatbotApp:
             tab_names=[
                 'Batch',
                 'Lang Serve',
-                'Embedding', 
+                'Embedding & VDB', 
                 'Meta Prompt',
                 'FAQ Summary Fix'
                 ],

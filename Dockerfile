@@ -6,13 +6,18 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir poetry
 
-# Copy all files from the current directory to the working directory in the 
-# container
-COPY . /app/
-
 # Install the required dependencies from requirements.txt
+COPY pyproject.toml poetry.lock /app/
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
+
+# Copy files and folders from the current directory 
+# to the working directory `/app` in the container:
+COPY db/ /app/db/
+COPY components/ /app/components/
+COPY tools/ /app/tools/
+COPY ui/ /app/ui/
+COPY seshat.py /app/
 
 # Expose the port (if necessary)
 EXPOSE 7860
