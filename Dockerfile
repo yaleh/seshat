@@ -17,7 +17,7 @@ COPY db/ /app/db/
 COPY components/ /app/components/
 COPY tools/ /app/tools/
 COPY ui/ /app/ui/
-COPY seshat.py /app/
+COPY seshat.py config.yaml /app/
 
 # Expose the port (if necessary)
 EXPOSE 7860
