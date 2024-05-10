@@ -30,7 +30,7 @@ class FAQSummaryFixUI:
                         self.process_button = gr.Button("Process Data")
 
             self.file_input.change(
-                lambda x: pd.read_excel(x.name),
+                self._excel_file_uploaded,
                 inputs=self.file_input,
                 outputs=self.data_before
             )
@@ -46,6 +46,11 @@ class FAQSummaryFixUI:
             )
 
         return demo
+    
+    def _excel_file_uploaded(self, file):
+        if file is None:
+            return None
+        return pd.read_excel(file.name)
 
     def _generate_id(self):
         """Generate a pseudo-Nano ID using hex format (16 bytes = 32 hex
@@ -71,8 +76,11 @@ class FAQSummaryFixUI:
 
     def _process_faq_data(self, dataframe, question, summary, q_and_a):
         """Process the DataFrame to add new columns."""
-        df = dataframe
-        df['faq_id'], df['faq_text'], df['rdb_text'] = zip(*df.apply(self._construct_faq_text,
-                                                 args=(question, summary, q_and_a),
-                                                 axis=1))
-        return df
+        try:
+            df = dataframe
+            df['faq_id'], df['faq_text'], df['rdb_text'] = zip(*df.apply(self._construct_faq_text,
+                                                    args=(question, summary, q_and_a),
+                                                    axis=1))
+            return df
+        except Exception as e:
+            raise gr.Error(f"Error processing data: {e}")
