@@ -5,7 +5,7 @@ description = ""
 authors = ["Yale Huang <calvino.huang@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.13"
 confz = "2.0.1"
 gradio = "4.26.0"
 ipython = "8.12.3"
@@ -23,6 +23,10 @@ langserve = "^0.1.0"
 bson = "^0.5.10"
 gunicorn = "^22.0.0"
 huggingface-hub = "^0.23.0"
+langchain-chroma = "^0.1.0"
+protobuf = "3.20.*"
+faiss-cpu = "^1.8.0"
+Faker = "^25.2.0"
 
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.29.4"

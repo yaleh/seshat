@@ -55,6 +55,22 @@ class EmbeddingUI:
             self.config.server.max_message_length
         )
 
+        self.vdb_settings = {
+            "Pinecone": {
+                "host": None,
+                "api_key": None
+            },
+            "Milvus": {
+                "uri": None,
+                "token": None,
+                "collection_name": None
+            },
+            "Chroma": {
+                "filename": None
+            }
+        }
+        self.current_vdb_type = "Pinecone"
+
         self.ui = self.init_ui()
 
     def init_ui(self):
@@ -67,7 +83,7 @@ class EmbeddingUI:
                         value=list(self.config.embedding.keys())[0],
                     )
                     self.vdb_type = gr.Dropdown(
-                        ["Pinecone", "Milvus"],
+                        ["Pinecone", "Milvus", "Chroma", "FAISS"],
                         label="Vector Database",
                         value="Pinecone",
                         visible=False,
@@ -76,6 +92,12 @@ class EmbeddingUI:
 
                     self.pinecone_tab = gr.Tab("Pinecone")
                     self.milvus_tab = gr.Tab("Milvus")
+
+                    # Todo:
+                    # * Upload Chroma DB package in zip/tar.gz
+                    # * Update the current DB
+                    # * Download the DB package
+                    self.chroma_tab = gr.Tab("Chroma")
 
                     with self.pinecone_tab:
                         self.pinecone_host = gr.Dropdown(
@@ -90,6 +112,13 @@ class EmbeddingUI:
                             allow_custom_value=True,
                             interactive=True
                         )
+                        pinecone_components = [self.pinecone_host, self.pinecone_api_key]
+                        for component in pinecone_components:
+                            component.change(
+                                self.update_pinecone_settings,
+                                pinecone_components,
+                                []
+                            )
 
                     with self.milvus_tab:
                         self.milvus_uri = gr.Dropdown(
@@ -110,6 +139,28 @@ class EmbeddingUI:
                             allow_custom_value=True,
                             interactive=True
                         )
+                        milvus_components = [self.milvus_uri, self.milvus_token, self.milvus_collection_name]
+                        for component in milvus_components:
+                            component.change(
+                                self.update_milvus_settings,
+                                milvus_components,
+                                []
+                            )
+
+                    with self.chroma_tab:
+                        with gr.Group():
+                            self.chroma_file = gr.File(label="Chroma File", interactive=True)
+                            self.save_chroma_btn = gr.Button(value="Save Chroma", variant='primary')
+                        self.chroma_file.upload(
+                            self.update_chroma_settings,
+                            [self.chroma_file],
+                            []
+                        )
+                        self.chroma_file.clear(
+                            self.update_chroma_settings,
+                            [self.chroma_file],
+                            []
+                        )
 
                     self.reload_vdb_settings_btn = gr.Button(value="Reload VDB Settings",
                                                              variant='secondary')
@@ -125,37 +176,42 @@ class EmbeddingUI:
                         with gr.Tab('Advanced'):
                             self.clear_vdb_btn = gr.Button(value="Clear VDB", variant='danger')
 
-                    with gr.Row():
-                        self.file_table = gr.File(label="Table Data")
-
-                        with gr.Group():
-                            self.file_embeddings = gr.File(
-                                label="Embeddings",
-                                file_types=['csv', 'xls', 'xlsx']
-                            )
-                            self.import_data_btn = gr.Button(value="Import Data", variant='primary')
-
-                with gr.Column(scale=2):
+                with gr.Column(scale=3):
                     # Add a Gradio Dataframe and a Gradio File component
                     with gr.Tab("Table"):
                         self.input_dataframe = gr.Dataframe(
-                            interactive=False
+                            interactive=True,
+                            wrap=True
                         )
                         with gr.Row():
-                            self.key_field = gr.Textbox(label="Key Field", value="id")
-                            self.value_fields = gr.Textbox(
-                                label="Value Fields",
-                                placeholder="field1, field2, ...",
-                                value="text"
-                            )
-                        with gr.Row():
-                            self.batch_start = gr.Number(label="Start", value=0, minimum=0, precision=0)
-                            self.batch_end = gr.Number(label="End (excluded)", value=0, minimum=0, precision=0)
-                            self.batch_size = gr.Number(
-                                label="Batch Size",
-                                value=1, minimum=0, precision=0,
-                                info="Batch for embedding/importing"
+                            with gr.Column(min_width=160):
+                                with gr.Group():
+                                    self.file_table = gr.File(label="Table Data")
+                                    self.save_table_btn = gr.Button(value="Save Table", variant='primary')
+
+                            with gr.Column(min_width=160):
+                                with gr.Group():
+                                    self.file_embeddings = gr.File(
+                                        label="Embeddings",
+                                        file_types=['csv', 'xls', 'xlsx']
+                                    )
+                                    self.import_data_btn = gr.Button(value="Import Data", variant='primary')
+
+                            with gr.Column(min_width=160):
+                                self.key_field = gr.Textbox(label="Key Field", value="id")
+                                self.value_fields = gr.Textbox(
+                                    label="Value Fields",
+                                    placeholder="field1, field2, ...",
+                                    value="text"
                                 )
+                            with gr.Column(min_width=160):
+                                self.batch_start = gr.Number(label="Start", value=0, minimum=0, precision=0)
+                                self.batch_end = gr.Number(label="End (excluded)", value=0, minimum=0, precision=0)
+                                self.batch_size = gr.Number(
+                                    label="Batch Size",
+                                    value=1, minimum=0, precision=0,
+                                    info="Batch for embedding/importing"
+                                    )
 
                         with gr.Tab("Embedding"):
                             with gr.Row():
@@ -164,8 +220,19 @@ class EmbeddingUI:
 
                         with gr.Tab("Clustering"):
                             with gr.Row():
-                                self.clusters = gr.Number(label="Clusters", value=10)
-                                self.clustering_btn = gr.Button(value="Cluster Analysis", variant='primary')
+                                with gr.Column(min_width=160):
+                                    self.recreate_cluster_output_checkbox = gr.Checkbox(label="Recreate Cluster Output", value=False)
+                                    self.cluster_output_field = gr.Textbox(
+                                        label = "Cluster Output Field",
+                                        value = "Cluster",
+                                        interactive=True
+                                    )
+                                with gr.Column(min_width=160):
+                                    self.clusters = gr.Number(label="Clusters", value=10)
+                                    self.cluster_label_base = gr.Number(label="Cluster Label Base", value=0)
+                                with gr.Column(min_width=160):
+                                    self.clustering_btn = gr.Button(value="Cluster Analysis", variant='primary')
+                                    self.add_index_column_btn = gr.Button(value="Add Index Column", variant='secondary')
 
                     with gr.Tab("Text"):
                         self.input_text = gr.Textbox(
@@ -228,6 +295,7 @@ class EmbeddingUI:
 
             self.pinecone_tab.select(self.select_vdb_tab, [], [self.vdb_type])
             self.milvus_tab.select(self.select_vdb_tab, [], [self.vdb_type])
+            self.chroma_tab.select(self.select_vdb_tab, [], [self.vdb_type])
 
             self.reload_vdb_settings_btn.click(
                 self.reload_vdb_settings,
@@ -237,16 +305,12 @@ class EmbeddingUI:
 
             self.refresh_vdb_btn.click(
                 self.refresh_vdb,
-                [self.vdb_type,
-                 self.pinecone_host, self.pinecone_api_key, 
-                 self.milvus_uri, self.milvus_token, self.milvus_collection_name],
+                [],
                 [self.vdb_index_description]
             )
             self.clear_vdb_btn.click(
                 self.clear_vdb,
-                [self.vdb_type,
-                 self.pinecone_host, self.pinecone_api_key,
-                 self.milvus_uri, self.milvus_token, self.milvus_collection_name],
+                [],
                 [self.vdb_index_description]
             )
             self.file_table.upload(
@@ -277,12 +341,6 @@ class EmbeddingUI:
             self.import_data_btn.click(
                 self.import_data,
                 [
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name,
                     self.input_dataframe,
                     self.value_fields,
                     self.file_embeddings,
@@ -299,12 +357,6 @@ class EmbeddingUI:
                     self.key_field,
                     self.value_fields,
                     self.model_name,
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name,
                     self.batch_start,
                     self.batch_end,
                     self.batch_size
@@ -313,8 +365,19 @@ class EmbeddingUI:
             )
             self.clustering_btn.click(
                 self.cluster_dataframe,
-                [self.input_dataframe, self.file_embeddings, self.clusters],
-                [self.input_dataframe, self.file_table]
+                [
+                    self.input_dataframe, self.file_embeddings,
+                    self.recreate_cluster_output_checkbox, self.cluster_output_field,
+                    self.clusters, self.cluster_label_base,
+                    self.batch_start, self.batch_end
+                ],
+                [self.input_dataframe]
+            )
+
+            self.add_index_column_btn.click(
+                self.add_index_column,
+                [self.input_dataframe],
+                [self.input_dataframe]
             )
 
             self.embed_text_btn.click(
@@ -326,12 +389,6 @@ class EmbeddingUI:
             self.vdb_search_btn.click(
                 self.vdb_search,
                 [
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name,
                     self.output_embedding,
                     self.vdb_search_k_number
                 ],
@@ -341,12 +398,6 @@ class EmbeddingUI:
                 self.embed_search,
                 [
                     self.model_name,
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name,
                     self.input_text,
                     self.vdb_search_k_number
                 ],
@@ -357,34 +408,28 @@ class EmbeddingUI:
                 [
                     self.output_embedding, 
                     self.upsert_text, 
-                    self.overwrite_checkbox,
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name
+                    self.overwrite_checkbox
                 ],
                 [self.vdb_index_description]
             )
             self.delete_text_btn.click(
                 self.delete_embedded_text,
                 [
-                    self.id_to_delete_text,
-                    self.vdb_type,
-                    self.pinecone_host,
-                    self.pinecone_api_key,
-                    self.milvus_uri,
-                    self.milvus_token,
-                    self.milvus_collection_name
+                    self.id_to_delete_text
                 ],
                 [self.vdb_index_description]
+            )
+            self.save_table_btn.click(
+                self.save_table,
+                [self.input_dataframe],
+                [self.file_table]
             )
 
         return block
     
     def select_vdb_tab(self, event: gr.SelectData):
-        return str(event.value)            
+        self.current_vdb_type = event.value
+        return str(event.value)           
     
     def embed_text(self, input_text, model_name):
         try:
@@ -395,16 +440,14 @@ class EmbeddingUI:
         except Exception as e:
             raise gr.Error(f'Error: {e}')
         
-    def update_vdb_history_db(self, vdb_type, 
-                           pinecone_host, pinecone_api_key,
-                           milvus_uri, milvus_token, milvus_collection_name):
-        if vdb_type == "Pinecone":
-            self.db_manager.append_message(EMBEDDING_PINECONE_HOSTS_TABLE, pinecone_host)
-            self.db_manager.append_message(EMBEDDING_PINECONE_API_KEYS_TABLE, pinecone_api_key)
-        elif vdb_type == "Milvus":
-            self.db_manager.append_message(EMBEDDING_MILVUS_URIS_TABLE, milvus_uri)
-            self.db_manager.append_message(EMBEDDING_MILVUS_TOKENS_TABLE, milvus_token)
-            self.db_manager.append_message(EMBEDDING_MILVUS_COLLECTIONS_TABLE, milvus_collection_name)
+    def update_vdb_history_db(self):
+        if self.current_vdb_type == "Pinecone":
+            self.db_manager.append_message(EMBEDDING_PINECONE_HOSTS_TABLE, self.vdb_settings["Pinecone"]["host"])
+            self.db_manager.append_message(EMBEDDING_PINECONE_API_KEYS_TABLE, self.vdb_settings["Pinecone"]["api_key"])
+        elif self.current_vdb_type == "Milvus":
+            self.db_manager.append_message(EMBEDDING_MILVUS_URIS_TABLE, self.vdb_settings["Milvus"]["uri"])
+            self.db_manager.append_message(EMBEDDING_MILVUS_TOKENS_TABLE, self.vdb_settings["Milvus"]["token"])
+            self.db_manager.append_message(EMBEDDING_MILVUS_COLLECTIONS_TABLE, self.vdb_settings["Milvus"]["collection_name"])
 
     def reload_vdb_settings(self):
         return (
@@ -430,49 +473,44 @@ class EmbeddingUI:
             )
         )
 
-    def refresh_vdb(self, vdb_type, 
-                    pinecone_host, pinecone_api_key,
-                    milvus_uri, milvus_token, milvus_collection_name):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
-        if vdb_type == "Pinecone":
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host=pinecone_host)
+    def refresh_vdb(self):
+        self.update_vdb_history_db()
+        if self.current_vdb_type == "Pinecone":
+            client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+            index = client.Index(host=self.vdb_settings["Pinecone"]["host"])
             return index.describe_index_stats().to_str()
-        elif vdb_type == "Milvus":
-            milvus = MilvusClient(uri=milvus_uri, token=milvus_token)
-            return milvus.get_collection_stats(milvus_collection_name)
+        elif self.current_vdb_type == "Milvus":
+            milvus = MilvusClient(
+                uri=self.vdb_settings['Milvus']['uri'],
+                token=self.vdb_settings['Milvus']['token']
+            )
+            return milvus.get_collection_stats(self.vdb_settings['Milvus']['collection_name'])
 
         return "No VDB selected"
 
-    def clear_vdb(self, vdb_type,
-                  pinecone_host, pinecone_api_key,
-                  milvus_uri, milvus_token, milvus_collection_name):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
-        if vdb_type == "Pinecone":
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host=pinecone_host)
+    def clear_vdb(self):
+        self.update_vdb_history_db()
+        if self.current_vdb_type == "Pinecone":
+            client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+            index = client.Index(host=self.vdb_settings["Pinecone"]["host"])
             index.delete(delete_all=True)
             gr.Info("VDB index cleared successfully")
             return index.describe_index_stats().to_str()
-        elif vdb_type == "Milvus":
-            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+        elif self.current_vdb_type == "Milvus":
+            client = MilvusClient(uri=self.vdb_settings["Milvus"]["uri"], token=self.vdb_settings["Milvus"]["token"])
 
             # get all ids
-            ids = client.query(milvus_collection_name, filter="id >= 0", output_fields=["id"])
+            ids = client.query(self.vdb_settings["Milvus"]["collection_name"], filter="id >= 0", output_fields=["id"])
             # ids looks like "[{'id': 0}, {'id': 1}, ...]"
             if ids is not None and len(ids) > 0:
                 ids = [int(id['id']) for id in ids]
                 # delete all ids
-                client.delete(milvus_collection_name, ids)
+                client.delete(self.vdb_settings["Milvus"]["collection_name"], ids)
 
                 gr.Info("VDB index cleared successfully")
             else:
                 gr.Info("No data to delete")
-            return client.get_collection_stats(milvus_collection_name)
+            return client.get_collection_stats(self.vdb_settings["Milvus"]["collection_name"])
         
         return "No VDB selected"
 
@@ -566,14 +604,10 @@ class EmbeddingUI:
             gr.Warning(f'Error: {e}')
             return None        
  
-    def import_data(self, vdb_type, 
-                    pinecone_host, pinecone_api_key,
-                    milvus_uri, milvus_token, milvus_collection_name,
+    def import_data(self,
                     input_dataframe, value_fields, embeddings,
                     start, end, batch_size):
-        self.update_vdb_history_db(vdb_type, 
-                        pinecone_host, pinecone_api_key,
-                        milvus_uri, milvus_token, milvus_collection_name)
+        self.update_vdb_history_db()
         value_fields = [field.strip() for field in value_fields.split(",")]
         metadatas = input_dataframe[value_fields][start:end].to_dict(orient='records')
         if isinstance(embeddings, gr.File) or isinstance(embeddings, str):
@@ -586,14 +620,14 @@ class EmbeddingUI:
             gr.Warning("The number of vectors and metadatas should be the same")
             return "The number of vectors and metadatas should be the same"
 
-        if vdb_type == "Pinecone":
+        if self.current_vdb_type == "Pinecone":
             ids = [str(uuid.uuid4()) for _ in vectors]
             vector_list = list(zip(ids, vectors, metadatas))
 
             batched_vectors = [vector_list[i:i+batch_size] for i in range(0, len(vector_list), batch_size)]
 
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host = pinecone_host)            
+            client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+            index = client.Index(host = self.vdb_settings["Pinecone"]["host"])            
 
             async_res = [
                 index.upsert(
@@ -607,80 +641,68 @@ class EmbeddingUI:
 
             gr.Info("Data imported successfully")
             return index.describe_index_stats().to_str()
-        elif vdb_type == "Milvus":
+        elif self.current_vdb_type == "Milvus":
             # vectors is a arry like [[0.3580376395471989, ...], ...]
             # metadatas is a list of dictionaries like [{"text": "pink_8682"},...]
             # create vector_list like [{"vector": [0.3580376395471989, ...], "text": "pink_8682"},...]
             vector_list = [{"vector": vector, **{field: metadata[field] for field in value_fields}} for vector, metadata in zip(vectors, metadatas)]
-            client = MilvusClient(uri=milvus_uri, token=milvus_token)
-            client.insert(milvus_collection_name, vector_list)
+            client = MilvusClient(
+                uri=self.vdb_settings["Milvus"]["uri"],
+                token=self.vdb_settings["Milvus"]["token"]
+            )
+            client.insert(self.vdb_settings["Milvus"]["collection_name"], vector_list)
             gr.Info("Data imported successfully")
-            return client.get_collection_stats(milvus_collection_name)
+            return client.get_collection_stats(self.vdb_settings["Milvus"]["collection_name"])
                     
         return "No VDB selected"
     
     def upsert_embeded_text(
-            self, embedding, upsert_text, overwrite,
-            vdb_type, 
-            pinecone_host, pinecone_api_key,
-            milvus_uri, milvus_token, milvus_collection_name
+            self, embedding, upsert_text, overwrite
             ):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
+        self.update_vdb_history_db()
         # convert embedding to a list of float
         vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
 
-        if vdb_type == "Pinecone":
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host=pinecone_host)
+        if self.current_vdb_type == "Pinecone":
+            client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+            index = client.Index(host=self.vdb_settings["Pinecone"]["host"])
 
             index.upsert(vectors=[(str(uuid.uuid4()), vector, {"text": upsert_text})], overwrite=overwrite)
             gr.Info("Data upserted successfully")
             return index.describe_index_stats().to_str()
-        elif vdb_type == "Milvus":
-            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+        elif self.current_vdb_type == "Milvus":
+            client = MilvusClient(uri=self.vdb_settings["Milvus"]["uri"], token=self.vdb_settings["Milvus"]["token"])
 
             data = [{"vector": vector, "text": upsert_text}]
-            client.insert(milvus_collection_name, data)
+            client.insert(self.vdb_settings["Milvus"]["collection_name"], data)
             gr.Info("Data upserted successfully")
-            return client.get_collection_stats(milvus_collection_name)
+            return client.get_collection_stats(self.vdb_settings["Milvus"]["collection_name"])
 
     def delete_embedded_text(
-            self, id_to_delete_text,
-            vdb_type,
-            pinecone_host, pinecone_api_key,
-            milvus_uri, milvus_token, milvus_collection_name
+            self, id_to_delete_text
             ):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
-        if vdb_type == "Pinecone":
-            client = PineconeClient(pinecone_api_key)
-            index = client.Index(host=pinecone_host)
+        self.update_vdb_history_db()
+        if self.current_vdb_type == "Pinecone":
+            client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+            index = client.Index(host=self.vdb_settings["Pinecone"]["host"])
 
             index.delete(ids=[id_to_delete_text])
             gr.Info("Data deleted successfully")
             return index.describe_index_stats().to_str()
-        elif vdb_type == "Milvus":
-            client = MilvusClient(uri=milvus_uri, token=milvus_token)
+        elif self.current_vdb_type == "Milvus":
+            client = MilvusClient(uri=self.vdb_settings["Milvus"]["uri"], token=self.vdb_settings["Milvus"]["token"])
 
-            client.delete(milvus_collection_name, [id_to_delete_text])
+            client.delete(self.vdb_settings["Milvus"]["collection_name"], [id_to_delete_text])
             gr.Info("Data deleted successfully")
-            return client.get_collection_stats(milvus_collection_name)
+            return client.get_collection_stats(self.vdb_settings["Milvus"]["collection_name"])
 
     def embed_import_dataframe(self,
                                input_dataframe,
                                key_field,
                                value_fields,
                                model_name,
-                               vdb_type,
-                               pinecone_host, pinecone_api_key,
-                               milvus_uri, milvus_token, milvus_collection_name,
                                start, end, batch_size):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
+        self.update_vdb_history_db()
         _, embedded_vectors = self._embed_dataframe(
             input_dataframe,
             key_field,
@@ -693,40 +715,25 @@ class EmbeddingUI:
 
         # Don't update output dataframe, import the data directly
         return self.import_data(
-            vdb_type,
-            pinecone_host, pinecone_api_key,
-            milvus_uri, milvus_token, milvus_collection_name,
             input_dataframe, value_fields, embedded_vectors,
             start, end, batch_size
         )
 
-    def vdb_search(
-            self,
-            vdb_type,
-            pinecone_host,
-            pinecone_api_key,
-            milvus_uri,
-            milvus_token,
-            milvus_collection_name,
-            embedding,
-            k
-    ):
-        self.update_vdb_history_db(vdb_type, 
-                                pinecone_host, pinecone_api_key,
-                                milvus_uri, milvus_token, milvus_collection_name)
+    def vdb_search(self, embedding, k):
+        self.update_vdb_history_db()
         try:
             vector = [float(i) for i in embedding[1:-1].split(',')] if isinstance(embedding, str) else embedding
 
-            if vdb_type == "Pinecone":
-                client = PineconeClient(pinecone_api_key)
-                index = client.Index(host=pinecone_host)
+            if self.current_vdb_type == "Pinecone":
+                client = PineconeClient(self.vdb_settings["Pinecone"]["api_key"])
+                index = client.Index(host=self.vdb_settings["Pinecone"]["host"])
                 result = index.query(vector=vector, top_k = k, include_metadata=True)
                 result = result.to_str()
 
-            elif vdb_type == "Milvus":
-                client = MilvusClient(uri=milvus_uri, token=milvus_token)
+            elif self.current_vdb_type == "Milvus":
+                client = MilvusClient(uri=self.vdb_settings["Milvus"]["uri"], token=self.vdb_settings["Milvus"]["token"])
                 result = client.search(
-                    collection_name=milvus_collection_name,
+                    collection_name=self.vdb_settings["Milvus"]["collection_name"],
                     data=[vector],
                     output_fields=["text"],
                     limit=k
@@ -741,12 +748,6 @@ class EmbeddingUI:
     def embed_search(
             self,
             model_name,
-            vdb_type,
-            pinecone_host,
-            pinecone_api_key,
-            milvus_uri,
-            milvus_token,
-            milvus_collection_name,
             input_text,
             k
     ):
@@ -755,41 +756,101 @@ class EmbeddingUI:
             embedding = model.embed_query(input_text)
 
             return self.vdb_search(
-                vdb_type,
-                pinecone_host,
-                pinecone_api_key,
-                milvus_uri,
-                milvus_token,
-                milvus_collection_name,
                 embedding,
                 k
             )
         except Exception as e:
             raise gr.Error(f'Error: {e}')
 
-    def cluster_dataframe(self, input_dataframe, embeddings_file, clusters):
-        # csv = pd.read_csv(embeddings_file).iloc[:, 0].tolist()
-        # # Convert the array of strings into ndarray
-        # data = np.array([np.array(ast.literal_eval(row)) for row in csv])
+    def cluster_dataframe(
+            self, input_dataframe, embeddings_file,
+            recreate_cluster_output, cluster_output_field,
+            clusters, cluster_label_base,
+            start, end):
+
+        # raise an error if input_dataframe or embeddings_file is empty
+        if input_dataframe.shape[0]<=1 or embeddings_file is None:
+            gr.Warning("Input dataframe or embeddings file is empty")
+            # return input_dataframe, None
+            return input_dataframe
 
         data = np.load(embeddings_file)
 
         if len(data) < clusters:
             gr.Warning("The number of clusters should be less than the number of data points")
-            return input_dataframe, None
+            # return input_dataframe, None
+            return input_dataframe
 
-        # Apply Spectral Clustering
-        spectral_clustering = SpectralClustering(n_clusters=clusters, random_state=0).fit(data)
+        # validate data length vs start&end
+        if len(data) != end - start:
+            gr.Warning("The number of vectors and data points should be the same")
+            # return input_dataframe, None
+            return input_dataframe
 
-        # Append the cluster labels to the last column of the dataframe
-        input_dataframe['Cluster'] = spectral_clustering.labels_
+        try:
+            # Apply Spectral Clustering
+            spectral_clustering = SpectralClustering(n_clusters=clusters, random_state=0).fit(data)
 
+            # add cluster label base to the cluster labels
+            spectral_clustering.labels_ += cluster_label_base
+
+            if recreate_cluster_output:
+                # drop the cluster output field if it exists
+                input_dataframe = input_dataframe.drop(columns=[cluster_output_field], errors='ignore')
+            # create an empty cluster output column if it doesn't exist
+            if cluster_output_field not in input_dataframe.columns:
+                input_dataframe[cluster_output_field] = None
+
+            # overwrite the rows (specified by start and end) of cluster output field if it exists
+            input_dataframe.loc[start:end-1, cluster_output_field] = spectral_clustering.labels_
+
+            # temp_filename = tempfile.NamedTemporaryFile(suffix=".csv", delete=False).name
+            # input_dataframe.to_csv(temp_filename, index=False)
+
+            gr.Info(f"Data clustered successfully into {clusters} clusters")
+
+            # return input_dataframe, temp_filename
+            return input_dataframe
+        except Exception as e:
+            raise gr.Error(f"Error: {e}")
+
+    def add_index_column(self, input_dataframe):
+        if 'index' not in input_dataframe.columns:
+            input_dataframe.insert(0, 'index', range(0, len(input_dataframe)))
+
+        # fill the index column with the row number if it's empty
+        input_dataframe['index'] = range(len(input_dataframe))
+
+        return input_dataframe
+    
+    def save_table(self, input_dataframe):
         temp_filename = tempfile.NamedTemporaryFile(suffix=".csv", delete=False).name
         input_dataframe.to_csv(temp_filename, index=False)
+        return temp_filename
 
-        gr.Info(f"Data clustered successfully into {clusters} clusters")
+    def update_pinecone_settings(self, pinecone_host, pinecone_api_key):
+        # create self.vdb_settings["Pinecone"] if it doesn't exist
+        if "Pinecone" not in self.vdb_settings:
+            self.vdb_settings["Pinecone"] = {}
+        self.vdb_settings["Pinecone"]["host"] = pinecone_host
+        self.vdb_settings["Pinecone"]["api_key"] = pinecone_api_key
 
-        return input_dataframe, temp_filename
+    def update_milvus_settings(self, milvus_uri, milvus_token, milvus_collection_name):
+        # create self.vdb_settings["Milvus"] if it doesn't exist
+        if "Milvus" not in self.vdb_settings:
+            self.vdb_settings["Milvus"] = {}
+        self.vdb_settings["Milvus"]["uri"] = milvus_uri
+        self.vdb_settings["Milvus"]["token"] = milvus_token
+        self.vdb_settings["Milvus"]["collection_name"] = milvus_collection_name
+
+    def update_chroma_settings(self, file):
+        # create self.vdb_settings["Chroma"] if it doesn't exist
+        if "Chroma" not in self.vdb_settings:
+            self.vdb_settings["Chroma"] = {}
+        if file is None:
+            self.vdb_settings["Chroma"]["file"] = None
+        else:
+            self.vdb_settings["Chroma"]["file"] = file.name
 
 if __name__ == "__main__":
     ui = EmbeddingUI()

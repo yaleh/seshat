@@ -16,40 +16,43 @@ class FAQSummaryFixUI:
         """Setup Gradio interface."""
         with gr.Blocks() as demo:
             with gr.Row():
-                with gr.Column():
-                    self.data_after = gr.Dataframe()
-                    self.download_output = gr.File(label="Download Processed File")
-
-                with gr.Column():
-                    self.data_before = gr.Dataframe()
+                with gr.Column(scale=1):
                     with gr.Row():
                         self.file_input = gr.File(label="Upload your Excel file")
-                        self.process_button = gr.Button("Process Data")
-            
-            with gr.Row():
-                with gr.Column():
-                    self.question_field = gr.Textbox(
-                        label="Question Field", value="Q")
-                    self.summary_field = gr.Textbox(
-                        label="Summary Field", value="A")
-                    self.q_and_a_field = gr.Textbox(
-                        label="Q&A Field", value="text")
+                        self.download_output = gr.File(label="Download Processed File")
+                    self.process_button = gr.Button("Process Data")
 
-                with gr.Column():
-                    self.faq_id_output_field = gr.Textbox(
-                        label="FAQ ID Output Field", value="faq_id")
-                    self.faq_text_output_field = gr.Textbox(
-                        label="FAQ Text Output Field", value="faq_text")
-                    self.rdb_text_output_field = gr.Textbox(
-                        label="RDB Text Output Field", value="rdb_text")
+                with gr.Column(scale=2):
+                    with gr.Accordion(label="Input", open=False):
+                        self.data_before = gr.Dataframe()
+                    with gr.Accordion(label="Output", open=False):
+                        self.data_after = gr.Dataframe()
+           
+            with gr.Accordion(label="Parameters"):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        self.question_field = gr.Textbox(
+                            label="Question Field", value="Q")
+                        self.summary_field = gr.Textbox(
+                            label="Summary Field", value="A")
+                        self.q_and_a_field = gr.Textbox(
+                            label="Q&A Field", value="text")
 
-                with gr.Column():
-                    self.no_answer_pattern = gr.Textbox(
-                        label="No Answer Pattern", value="<NO ANSWER/>")
-                    self.no_answer_output_template = gr.Textbox(
-                        label="No Answer Output Template", value="For more information about `{question}`, please visit the following link: [{question}](faq:{faq_id}).")
-                    self.general_output_template = gr.Textbox(
-                        label="General Output Template", value="{output} For more details, please see the link [{question}](faq:{faq_id}).")
+                    with gr.Column(scale=1):
+                        self.faq_id_output_field = gr.Textbox(
+                            label="FAQ ID Output Field", value="faq_id")
+                        self.faq_text_output_field = gr.Textbox(
+                            label="FAQ Text Output Field", value="faq_text")
+                        self.rdb_text_output_field = gr.Textbox(
+                            label="RDB Text Output Field", value="rdb_text")
+
+                    with gr.Column(scale=3):
+                        self.no_answer_pattern = gr.Textbox(
+                            label="No Answer Pattern", value="<NO ANSWER/>")
+                        self.no_answer_output_template = gr.Textbox(
+                            label="No Answer Output Template", value="For more information about `{question}`, please visit the following link: [{question}](faq:{faq_id}).")
+                        self.general_output_template = gr.Textbox(
+                            label="General Output Template", value="{output} For more details, please see the link [{question}](faq:{faq_id}).")
 
             self.file_input.change(
                 self._excel_file_uploaded,

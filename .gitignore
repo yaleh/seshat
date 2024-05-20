@@ -9,3 +9,4 @@ trials/*
 *.bak
 .data
 .env
+message.db
