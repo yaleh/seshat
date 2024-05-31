@@ -59,6 +59,14 @@ python main.py
 
 By default, the application will look for a `config.yaml` file in the current directory. You can customize the configuration by modifying this file or by providing a different configuration file.
 
+## Docker
+
+Docker image is also available for Seshat. To run Seshat in a Docker container, use the following command:
+
+```bash
+docker run -p 7860:7860 -v /path/to/your/config.yaml:/app/config.yaml ghcr.io/yaleh/seshat:main
+```
+
 ## User Interface
 
 Seshat provides a tabbed interface with the following sections:
