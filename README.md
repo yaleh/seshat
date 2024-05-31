@@ -11,7 +11,7 @@ Seshat is an advanced LLMOps (Large Language Model Operations) system designed t
 ![Batch LLM](screenshots/Seshat_Batch_1.png?raw=true)
 - **Lang Serve Client**: Interface for interacting with [LangServe](https://python.langchain.com/v0.2/docs/langserve/) applications.
 - **Embedding & VDB**: Embed strings/sheets, import embeddings to vector databases, and cluster embeddings.
-![Embedding](screenshots/Seshat_Embedding.png?raw=true)
+![Embedding](screenshots/Sechat_Embedding.png?raw=true)
 ![Clustering](screenshots/Seshat_Clustering.png?raw=true)
 - **Meta Prompt Management**: Create prompts with LLM, based on [meta-prompt](https://github.com/yaleh/meta-prompt).
 [![Meta Prompt](https://img.youtube.com/vi/eNFUq2AjKCk/0.jpg)](https://www.youtube.com/watch?v=eNFUq2AjKCk)
