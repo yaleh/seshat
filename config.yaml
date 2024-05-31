@@ -180,6 +180,50 @@ llm:
         temperature: 0
         max_retries: 3
         request_timeout: 600
+    Cloudflare:
+      type: OpenAI
+      default_model: llama-3-8b-instruct
+      args:
+        openai_api_base: https://api.cloudflare.com/client/v4/accounts/YOUR_ID/ai/v1/chat/completions
+        openai_api_key: ""
+        temperature: 0
+        max_retries: 3
+        request_timeout: 600
+      models:
+        - llama-2-7b-chat-fp16
+        - llama-2-7b-chat-int8
+        - mistral-7b-instruct-v0.1
+        - deepseek-coder-6.7b-base-awq
+        - deepseek-coder-6.7b-instruct-awq
+        - deepseek-math-7b-base
+        - deepseek-math-7b-instruct
+        - discolm-german-7b-v1-awq
+        - falcon-7b-instruct
+        - gemma-2b-it-lora
+        - gemma-7b-it
+        - gemma-7b-it-lora
+        - hermes-2-pro-mistral-7b
+        - llama-2-13b-chat-awq
+        - llama-2-7b-chat-hf-lora
+        - llama-3-8b-instruct
+        - llamaguard-7b-awq
+        - meta-llama-3-8b-instruct
+        - mistral-7b-instruct-v0.1-awq
+        - mistral-7b-instruct-v0.2
+        - mistral-7b-instruct-v0.2-lora
+        - neural-chat-7b-v3-1-awq
+        - openchat-3.5-0106
+        - openhermes-2.5-mistral-7b-awq
+        - phi-2
+        - qwen1.5-0.5b-chat
+        - qwen1.5-1.8b-chat
+        - qwen1.5-14b-chat-awq
+        - qwen1.5-7b-chat-awq
+        - sqlcoder-7b-2
+        - starling-lm-7b-beta
+        - tinyllama-1.1b-chat-v1.0
+        - una-cybertron-7b-v2-bf16
+        - zephyr-7b-beta-awq
     Azure_OpenAI:
       type: Azure_OpenAI
       default_model: gpt-35-turbo
