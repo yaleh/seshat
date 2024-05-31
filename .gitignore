@@ -1,0 +1,12 @@
+.venv
+.vscode/*
+**/__pycache__/*
+configs
+messages.db
+*.log
+data/*
+trials/*
+*.bak
+.data
+.env
+message.db

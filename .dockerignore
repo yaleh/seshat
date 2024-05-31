@@ -1,0 +1,12 @@
+.venv
+.vscode/*
+**/__pycache__/*
+configs
+messages.db
+*.log
+dxg_debug/*
+data/*
+trials/*
+*.bak
+.data
+.env

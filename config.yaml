@@ -1,0 +1,485 @@
+embedding:
+  text-embedding-3-small:
+    type: OpenAIEmbeddings
+    model: "text-embedding-3-small"
+    request_timeout: 10
+    openai_api_key: ""
+  azure-text-embedding-3-small:
+    type: AzureOpenAIEmbeddings
+    model: "text-embedding-3-small"
+    request_timeout: 10
+    openai_api_key: ""
+    azure_endpoint: ""
+  bge-large:
+    type: HuggingFaceHubEmbeddings
+    model: ""
+
+llm:
+  default_model_service: OpenAI
+  default_rr_model_name: gpt-4
+  llm_services:
+    OpenAI:
+      type: OpenAI
+      default_model: gpt-3.5-turbo
+      models:
+        - gpt-4
+        - gpt-4-0613
+        - gpt-4-32k
+        - gpt-4-32k-0613
+        - gpt-4-0125-preview
+        - gpt-3.5-turbo
+        - gpt-3.5-turbo-16k
+        - gpt-3.5-turbo-instruct
+        - gpt-3.5-turbo-0613
+        - gpt-3.5-turbo-0125
+      args:
+        openai_api_key: ""
+        temperature: 0
+        max_retries: 3
+        request_timeout: 600
+    OpenRouter:
+      type: OpenAI
+      default_model: mistralai/mistral-7b-instruct:free
+      models:
+        - nousresearch/nous-capybara-7b:free
+        - mistralai/mistral-7b-instruct:free
+        - openchat/openchat-7b:free
+        - gryphe/mythomist-7b:free
+        - undi95/toppy-m-7b:free
+        - openrouter/cinematika-7b:free
+        - google/gemma-7b-it:free
+        - jebcarter/psyfighter-13b
+        - koboldai/psyfighter-13b-2
+        - intel/neural-chat-7b
+        - haotian-liu/llava-13b
+        - nousresearch/nous-hermes-2-vision-7b
+        - meta-llama/llama-2-13b-chat
+        - pygmalionai/mythalion-13b
+        - xwin-lm/xwin-lm-70b
+        - alpindale/goliath-120b
+        - neversleep/noromaid-20b
+        - gryphe/mythomist-7b
+        - sophosympatheia/midnight-rose-70b
+        - undi95/remm-slerp-l2-13b:extended
+        - mancer/weaver
+        - mistralai/mixtral-8x7b-instruct
+        - nousresearch/nous-hermes-llama2-13b
+        - nousresearch/nous-capybara-7b
+        - meta-llama/codellama-34b-instruct
+        - codellama/codellama-70b-instruct
+        - phind/phind-codellama-34b
+        - teknium/openhermes-2-mistral-7b
+        - teknium/openhermes-2.5-mistral-7b
+        - undi95/remm-slerp-l2-13b
+        - openrouter/cinematika-7b
+        - 01-ai/yi-34b-chat
+        - 01-ai/yi-34b
+        - 01-ai/yi-6b
+        - togethercomputer/stripedhyena-nous-7b
+        - togethercomputer/stripedhyena-hessian-7b
+        - mistralai/mixtral-8x7b
+        - nousresearch/nous-hermes-yi-34b
+        - nousresearch/nous-hermes-2-mixtral-8x7b-sft
+        - nousresearch/nous-hermes-2-mistral-7b-dpo
+        - open-orca/mistral-7b-openorca
+        - huggingfaceh4/zephyr-7b-beta
+        - openai/gpt-3.5-turbo
+        - openai/gpt-3.5-turbo-0125
+        - openai/gpt-3.5-turbo-1106
+        - openai/gpt-3.5-turbo-0613
+        - openai/gpt-3.5-turbo-0301
+        - openai/gpt-3.5-turbo-16k
+        - openai/gpt-4-turbo
+        - openai/gpt-4-turbo-preview
+        - openai/gpt-4-1106-preview
+        - openai/gpt-4
+        - openai/gpt-4-0314
+        - openai/gpt-4-32k
+        - openai/gpt-4-32k-0314
+        - openai/gpt-4-vision-preview
+        - openai/gpt-3.5-turbo-instruct
+        - google/palm-2-chat-bison
+        - google/palm-2-codechat-bison
+        - google/palm-2-chat-bison-32k
+        - google/palm-2-codechat-bison-32k
+        - google/gemini-pro
+        - google/gemini-pro-vision
+        - google/gemini-pro-1.5
+        - perplexity/pplx-70b-online
+        - perplexity/pplx-7b-online
+        - perplexity/pplx-7b-chat
+        - perplexity/pplx-70b-chat
+        - perplexity/sonar-small-chat
+        - perplexity/sonar-medium-chat
+        - perplexity/sonar-small-online
+        - perplexity/sonar-medium-online
+        - anthropic/claude-3-opus
+        - anthropic/claude-3-sonnet
+        - anthropic/claude-3-haiku
+        - anthropic/claude-3-opus:beta
+        - anthropic/claude-3-sonnet:beta
+        - anthropic/claude-3-haiku:beta
+        - meta-llama/llama-2-70b-chat
+        - nousresearch/nous-capybara-34b
+        - jondurbin/airoboros-l2-70b
+        - jondurbin/bagel-34b
+        - austism/chronos-hermes-13b
+        - mistralai/mistral-7b-instruct
+        - gryphe/mythomax-l2-13b
+        - openchat/openchat-7b
+        - undi95/toppy-m-7b
+        - lizpreciatior/lzlv-70b-fp16-hf
+        - cognitivecomputations/dolphin-mixtral-8x7b
+        - neversleep/noromaid-mixtral-8x7b-instruct
+        - nousresearch/nous-hermes-2-mixtral-8x7b-dpo
+        - rwkv/rwkv-5-world-3b
+        - recursal/rwkv-5-3b-ai-town
+        - recursal/eagle-7b
+        - google/gemma-7b-it
+        - databricks/dbrx-instruct
+        - huggingfaceh4/zephyr-orpo-141b-a35b
+        - meta-llama/llama-3-8b-instruct
+        - meta-llama/llama-3-70b-instruct
+        - microsoft/wizardlm-2-8x22b
+        - microsoft/wizardlm-2-7b
+        - mistralai/mixtral-8x22b
+        - mistralai/mixtral-8x22b-instruct
+        - anthropic/claude-2
+        - anthropic/claude-2.1
+        - anthropic/claude-2.0
+        - anthropic/claude-instant-1
+        - anthropic/claude-instant-1.2
+        - anthropic/claude-1
+        - anthropic/claude-1.2
+        - anthropic/claude-instant-1.0
+        - anthropic/claude-instant-1.1
+        - anthropic/claude-2:beta
+        - anthropic/claude-2.1:beta
+        - anthropic/claude-2.0:beta
+        - anthropic/claude-instant-1:beta
+        - huggingfaceh4/zephyr-7b-beta:free
+        - mistralai/mixtral-8x7b-instruct:nitro
+        - meta-llama/llama-2-70b-chat:nitro
+        - gryphe/mythomax-l2-13b:nitro
+        - mistralai/mistral-7b-instruct:nitro
+        - google/gemma-7b-it:nitro
+        - databricks/dbrx-instruct:nitro
+        - undi95/toppy-m-7b:nitro
+        - microsoft/wizardlm-2-8x22b:nitro
+        - gryphe/mythomax-l2-13b:extended
+        - mistralai/mistral-tiny
+        - mistralai/mistral-small
+        - mistralai/mistral-medium
+        - mistralai/mistral-large
+        - cohere/command
+        - cohere/command-r
+        - cohere/command-r-plus
+      args:
+        openai_api_base: https://openrouter.ai/api/v1
+        openai_api_key: ""
+        temperature: 0
+        max_retries: 3
+        request_timeout: 600
+    Cloudflare:
+      type: OpenAI
+      default_model: llama-3-8b-instruct
+      args:
+        openai_api_base: https://api.cloudflare.com/client/v4/accounts/YOUR_ID/ai/v1/chat/completions
+        openai_api_key: ""
+        temperature: 0
+        max_retries: 3
+        request_timeout: 600
+      models:
+        - llama-2-7b-chat-fp16
+        - llama-2-7b-chat-int8
+        - mistral-7b-instruct-v0.1
+        - deepseek-coder-6.7b-base-awq
+        - deepseek-coder-6.7b-instruct-awq
+        - deepseek-math-7b-base
+        - deepseek-math-7b-instruct
+        - discolm-german-7b-v1-awq
+        - falcon-7b-instruct
+        - gemma-2b-it-lora
+        - gemma-7b-it
+        - gemma-7b-it-lora
+        - hermes-2-pro-mistral-7b
+        - llama-2-13b-chat-awq
+        - llama-2-7b-chat-hf-lora
+        - llama-3-8b-instruct
+        - llamaguard-7b-awq
+        - meta-llama-3-8b-instruct
+        - mistral-7b-instruct-v0.1-awq
+        - mistral-7b-instruct-v0.2
+        - mistral-7b-instruct-v0.2-lora
+        - neural-chat-7b-v3-1-awq
+        - openchat-3.5-0106
+        - openhermes-2.5-mistral-7b-awq
+        - phi-2
+        - qwen1.5-0.5b-chat
+        - qwen1.5-1.8b-chat
+        - qwen1.5-14b-chat-awq
+        - qwen1.5-7b-chat-awq
+        - sqlcoder-7b-2
+        - starling-lm-7b-beta
+        - tinyllama-1.1b-chat-v1.0
+        - una-cybertron-7b-v2-bf16
+        - zephyr-7b-beta-awq
+    Azure_OpenAI:
+      type: Azure_OpenAI
+      default_model: gpt-35-turbo
+      models:
+        - gpt-35-turbo
+        - gpt-4
+      args:
+        openai_api_type: "azure"
+        openai_api_version: 2023-03-15-preview
+        openai_api_base: ""
+        openai_api_key: ""
+        temperature: 0
+        max_retries: 3
+        request_timeout: 600
+    Replicate:
+      type: Replicate
+      default_model: a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5
+      models:
+        - a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5
+      args:
+        REPLICATE_API_TOKEN: ""
+        temperature: 0
+    HuggingFace:
+      type: HuggingFace
+      default_model: google/flan-t5-xxl
+      models:
+        - gpt2
+        - google/flan-t5-xxl
+        - databricks/dolly-v2-3b
+      args:
+        huggingfacehub_api_token: ""
+        model_kwargs:
+          temperature: 0.5
+          max_length: 64
+
+meta_prompt:
+  default_meta_model_service: OpenAI
+  default_meta_model_name: gpt-4
+  default_target_model_service: OpenAI
+  default_target_model_name: gpt-3.5-turbo
+  meta_system_prompt: >
+    You are a Prompt Engineer. You review the Prompt template for GTP-3.5 and suggest changes.
+
+    # Prompt template format
+
+    You require Prompt to be written in the following format:
+
+    ```
+    <ROLE>
+
+    <TASK>
+
+    <REQUIREMENTS_AND_RESTRICTIONS>
+
+    ```
+
+    * ROLE: The role the LLM is required to play. Describe it in one sentence.
+    * TASK: A summary and overall description of the tasks to be performed by LLM. Describe it in one or more sentences.
+    * REQUIREMENTS_AND_RESTRICTIONS: Specific requirements for the task. Describe using Markdown List.
+
+    Variables in the user message [USER_MESSAGE] will replace the same-name placeholders in the prompt.
+
+    # Check input
+
+    Check the input format as follows:
+
+    ```
+    * Prompt Template
+
+    [PROMPT_TEMPLATE]
+
+    * User Message
+
+    [USER_MESSAGE]
+
+    * Expected GPT Message
+
+    [EXPECTED_GPT_MESSAGE]
+
+    * GPT Message
+
+    [GPT_MESSAGE]
+    ```
+
+    * PROMPT_TEMPLATE: Prompt template that conforms to the above Prompt template format.
+    * USER_MESSAGE: User input. Contain muti-variables which are used to substitute for the placeholder in the Prompt Template with the same name. 
+    * EXPECTED_GPT_MESSAGE: Expect output generated by GPT.
+    * GPT_MESSAGE: GPT is actually based on the output generated by PROMPT_TEMPLATE and USER_MESSAGE.
+
+    # examine
+
+    Check and recommend modifying the Prompt template as follows to produce output closer to EXPECTED_GPT_MESSAGE:
+
+    * Read and parse PROMPT_TEMPLATE, USER_MESSAGE and EXPECTED_GPT_MESSAGE.
+      * Generate a description [TD] of this task according to your understanding.
+      * Analyze the correlation between PROMPT_TEMPLATE and USER_MESSAGE [UMR].
+      * Analyze and describe the characteristics of EXPECTED_GPT_MESSAGE in terms of text length, format, content, meaning and style.
+      * Analyze whether PROMPT_TEMPLATE and EXPECTED_GPT_MESSAGE match and list the differences [PED].
+    * Check whether GPT_MESSAGE conforms to EXPECTED_GPT_MESSAGE. Refer to EXPECTED_GPT_MESSAGE and TD analysis on how GPT_MESSAGE can be optimized to be close to EXPECTED_GPT_MESSAGE. Modification suggestions are listed in detail [MCSL].
+      * Pay attention to checking the text length, format, content, meaning and style, and output corresponding modification suggestions.
+        * Suggested modifications to text length should include quantitative numerical descriptions.
+        * Suggestions for changes to text formatting should include specific examples enclosed by "```".
+      * Pay attention to check whether unnecessary content is included in GPT_MESSAGE and output corresponding modification suggestions.
+      * Suggestions for modifying local content should include the modifiable fragments and recommended modified fragments in GPT_MESSAGE.
+    * Check PROMPT_TEMPLATE: Analyze and list suggestions [CSL] for how to modify PROMPT_TEMPLATE to produce output closer to EXPECTED_GPT_MESSAGE.
+      * For requirements that have been stated in REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE, they should also be emphasized in TASK, and the opposite tendency (such as reverse adjustment of quantitative indicators or style descriptions) should be emphasized punitively to construct the strongest Negative feedback***.
+        * For format requirements that have been stated in REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE, add an example enclosed with "```".
+      * Based on PED recommendations on how to modify PROMPT_TEMPLATE.
+      * Analyze and suggest how to modify PROMPT_TEMPLATE to implement the MCSL listed above.
+      * Analyze whether PROMPT_TEMPLATE conforms to the format defined by `Prompt template format` and suggest how to modify it.
+      * Analyze those instructions that do not comply with EXPECTED_GPT_MESSAGE and are clearly misleading, and recommend modifications.
+      * Modifications to PROMPT_TEMPLATE should not introduce more information related to USER_MESSAGE.
+      * In TASK and REQUIREMENTS_AND_RESTRICTIONS, group the requirements for the same content together.
+      * If there are multiple steps, use a numbered list to list the steps clearly.
+      * Care should be taken to avoid unnecessary changes, and the original text should be retained as much as possible for parts that do not need to be changed.
+      * Only output [CSL], do not output the modified PROMPT_TEMPLATE.
+    * Check and filter the Change Suggestions List [CSL] for information related to USER_MESSAGE.
+      * Only output the filtered modification suggestion list [RCSL], do not output the modified PROMPT_TEMPLATE.
+    * Execute the above filtered modification suggestion list [RCSL] and ***output the modified PROMPT_TEMPLATE***.
+      * Execute RCSL only, avoid other changes.
+      * Care should be taken to avoid unnecessary changes, and the original text should be retained as much as possible for parts that do not need to be changed, except the requirements that have been stated in TASK or REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE.
+      * Strictly use the following format for output:
+    ```
+    <!-- BEGIN OF PROMPT -->
+
+    <Updated Prompt>
+
+    <!-- END OF PROMPT -->
+    ```
+      * If there's no change, output following fixed message instead:
+    ```
+    <!-- NO CHANGE TO PROMPT -->
+    ```
+    * Evaluation modified PROMPT_TEMPLATE.
+      * Analyze the changes it may cause in the output of LLM [EC].
+      * Analyze whether EC would be more consistent with EXPECTED_GPT_MESSAGE.
+      * Analyze the correlation between modified PROMPT_TEMPLATE and USER_MESSAGE [UMRC].
+      * Analyze UMR and UMRC to determine whether the modification introduces additional information about USER_MESSAGE. If introduced, issue a warning.
+    * NOTICE: During the above steps, ****output RCSL and the modified PROMPT_TEMPLATE only, don't print the output of other steps***.
+
+    ----
+
+    Now, provide the PROMPT_TEMPLATE, USER_MESSAGE, EXPECTED_GPT_MESSAGE, and GPT_MESSAGE for review.
+  meta_system_prompt_with_other_prompts: >
+    You are a Prompt Engineer. You review the Prompt template for GTP-3.5 and suggest changes.
+
+    # Prompt template format
+
+    You require Prompt to be written in the following format:
+
+    ```
+    <ROLE>
+
+    <TASK>
+
+    <REQUIREMENTS_AND_RESTRICTIONS>
+
+    ```
+
+    * ROLE: The role the LLM is required to play. Describe it in one sentence.
+    * TASK: A summary and overall description of the tasks to be performed by LLM. Describe it in one or more sentences.
+    * REQUIREMENTS_AND_RESTRICTIONS: Specific requirements for the task. Describe using Markdown List.
+
+    A string of user message [USER_MESSAGE] entered by the user will be attached to the end of the prompt.
+
+    # Check input
+
+    Check the input format as follows:
+
+    ```
+    * Prompt Template
+
+    [PROMPT_TEMPLATE]
+
+    * User Message
+
+    [USER_MESSAGE]
+
+    * Other User Messages
+
+    [OTHER_USER_MESSAGES]
+
+    * Expected GPT Message
+
+    [EXPECTED_GPT_MESSAGE]
+
+    * GPT Message
+
+    [GPT_MESSAGE]
+    ```
+
+    * PROMPT_TEMPLATE: Prompt template that conforms to the above Prompt template format.
+    * USER_MESSAGE: User input. Include muti-variables which are used to substitute for the placeholder with the same name. 
+    * OTHER_USER_MESSAGES: Other user messages that the prompt template is expected to be compatible with.
+    * EXPECTED_GPT_MESSAGE: Expect output generated by GPT.
+    * GPT_MESSAGE: GPT is actually based on the output generated by PROMPT_TEMPLATE and USER_MESSAGE.
+
+    # examine
+
+    Check and recommend modifying the Prompt template as follows to produce output closer to EXPECTED_GPT_MESSAGE:
+
+    * Read and parse PROMPT_TEMPLATE, USER_MESSAGE, OTHER_USER_MESSAGES and EXPECTED_GPT_MESSAGE.
+      * Generate a description [TD] of this task according to your understanding.
+      * Analyze the correlation between PROMPT_TEMPLATE, USER_MESSAGE and OTHER_USER_MESSAGES [UMR].
+      * Analyze and describe the characteristics of EXPECTED_GPT_MESSAGE in terms of text length, format, content, meaning and style.
+      * Analyze whether PROMPT_TEMPLATE and EXPECTED_GPT_MESSAGE match and list the differences [PED].
+    * Check whether GPT_MESSAGE conforms to EXPECTED_GPT_MESSAGE. Refer to EXPECTED_GPT_MESSAGE and TD analysis on how GPT_MESSAGE can be optimized to be close to EXPECTED_GPT_MESSAGE. Modification suggestions are listed in detail [MCSL].
+      * Pay attention to checking the text length, format, content, meaning and style, and output corresponding modification suggestions.
+        * Suggested modifications to text length should include quantitative numerical descriptions.
+        * Suggestions for changes to text formatting should include specific examples enclosed by "```".
+      * Pay attention to check whether unnecessary content is included in GPT_MESSAGE and output corresponding modification suggestions.
+      * Suggestions for modifying local content should include the modifiable fragments and recommended modified fragments in GPT_MESSAGE.
+    * Check PROMPT_TEMPLATE: Analyze and list suggestions [CSL] for how to modify PROMPT_TEMPLATE to produce output closer to EXPECTED_GPT_MESSAGE.
+      * For requirements that have been stated in REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE, they should also be emphasized in TASK, and the opposite tendency (such as reverse adjustment of quantitative indicators or style descriptions) should be emphasized punitively to construct the strongest Negative feedback***.
+        * For format requirements that have been stated in REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE, add an example enclosed with "```".
+      * Based on PED recommendations on how to modify PROMPT_TEMPLATE.
+      * Analyze and suggest how to modify PROMPT_TEMPLATE to implement the MCSL listed above.
+      * Analyze whether PROMPT_TEMPLATE conforms to the format defined by `Prompt template format` and suggest how to modify it.
+      * Analyze those instructions that do not comply with EXPECTED_GPT_MESSAGE and are clearly misleading, and recommend modifications.
+      * Modifications to PROMPT_TEMPLATE should not introduce more information related to USER_MESSAGE.
+      * In TASK and REQUIREMENTS_AND_RESTRICTIONS, group the requirements for the same content together.
+      * If there are multiple steps, use a numbered list to list the steps clearly.
+      * Care should be taken to avoid unnecessary changes, and the original text should be retained as much as possible for parts that do not need to be changed.
+      * Only output [CSL], do not output the modified PROMPT_TEMPLATE.
+    * Check and filter the Change Suggestions List [CSL] for information related to USER_MESSAGE.
+      * Only output the filtered modification suggestion list [RCSL], do not output the modified PROMPT_TEMPLATE.
+      * Keep it compatible with OTHER_USER_MESSAGES.
+    * Execute the above filtered modification suggestion list [RCSL] and ***output the modified PROMPT_TEMPLATE***.
+      * Execute RCSL only, avoid other changes.
+      * Care should be taken to avoid unnecessary changes, and the original text should be retained as much as possible for parts that do not need to be changed, except the requirements that have been stated in TASK or REQUIREMENTS_AND_RESTRICTIONS but are not met by GPT_MESSAGE.
+      * Strictly use the following format for output:
+    ```
+    <!-- BEGIN OF PROMPT -->
+
+    <Updated Prompt>
+
+    <!-- END OF PROMPT -->
+    ```
+      * If there's no change, output following fixed message instead:
+    ```
+    <!-- NO CHANGE TO PROMPT -->
+    ```
+    * Evaluation modified PROMPT_TEMPLATE.
+      * Analyze the changes it may cause in the output of LLM [EC].
+      * Analyze whether EC would be more consistent with EXPECTED_GPT_MESSAGE.
+      * Analyze the correlation between modified PROMPT_TEMPLATE, USER_MESSAGE and OTHER_USER_MESSAGES [UMRC].
+      * Analyze UMR and UMRC to determine whether the modification introduces additional information about USER_MESSAGE. If introduced, issue a warning.
+    * NOTICE: During the above steps, ****output RCSL and the modified PROMPT_TEMPLATE only, don't print the output of other steps***.
+
+    ----
+
+    Now, provide the PROMPT_TEMPLATE, USER_MESSAGE, OTHER_USER_MESSAGES, EXPECTED_GPT_MESSAGE, and GPT_MESSAGE for review.
+
+server:
+  message_db: message.db
+  max_message_length: 65535
+  host: 0.0.0.0
+  port: 7800
+  share: True
