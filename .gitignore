@@ -10,3 +10,5 @@ trials/*
 .data
 .env
 message.db
+cosign.key
+cosign.pub
