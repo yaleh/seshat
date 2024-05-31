@@ -7,12 +7,12 @@ Seshat is an advanced LLMOps (Large Language Model Operations) system designed t
 ## Features
 
 - **Batch Processing**: Efficiently handle large batches of data with LLM.
-![Batch LLM](sceenshots/Seshat_Batch.png)
-![Batch LLM](sceenshots/Seshat_Batch_1.png)
+![Batch LLM](screenshots/Seshat_Batch.png?raw=true)
+![Batch LLM](screenshots/Seshat_Batch_1.png?raw=true)
 - **Lang Serve Client**: Interface for interacting with [LangServe](https://python.langchain.com/v0.2/docs/langserve/) applications.
 - **Embedding & VDB**: Embed strings/sheets, import embeddings to vector databases, and cluster embeddings.
-![Embedding](sceenshots/Seshat_Embedding.png)
-![Clustering](sceenshots/Seshat_Clustering.png)
+![Embedding](screenshots/Seshat_Embedding.png?raw=true)
+![Clustering](screenshots/Seshat_Clustering.png?raw=true)
 - **Meta Prompt Management**: Create prompts with LLM, based on [meta-prompt](https://github.com/yaleh/meta-prompt).
 [![Meta Prompt](https://img.youtube.com/vi/eNFUq2AjKCk/0.jpg)](https://www.youtube.com/watch?v=eNFUq2AjKCk)
 - **FAQ Summary Fix**: Preprocess FAQ data, convert Q&A sheets into `faq_text` and `rdb_text`. `faq_text` is used by VDB and LLM for inference, while `rdb_text` is used for output.
