@@ -503,7 +503,7 @@ class BatchUI:
                 with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_file:
                     temp_filename = temp_file.name
                     data.to_csv(temp_filename, index=False)
-                    return data, gr.File.update(value=temp_filename, visible=True)
+                    return data, gr.File(value=temp_filename, visible=True)
             except (IndexError, TypeError):
                 return None, None
         elif updating_table_method == "Chat History":

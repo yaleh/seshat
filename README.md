@@ -2,16 +2,21 @@
 
 ## Overview
 
-Seshat is an advanced LLMOps (Large Language Model Operations) system designed to streamline and enhance the workflow for LLM developers and prompt engineers. This project leverages a modular interface to manage various components such as batch processing, embeddings, meta-prompts, FAQ summaries, and system configurations. Seshat aims to provide a comprehensive and user-friendly environment for managing and optimizing language models.
+Seshat is an advanced LLMOps (Large Language Model Operations) system designed to streamline and enhance the workflow for LLM developers and prompt engineers. This project leverages a modular interface to manage various components such as batch processing, embeddings, meta-prompts, FAQ summaries, and system configurations. Seshat aims to provide a comprehensive and user-friendly environment for prompts and data processing with LLM.
 
 ## Features
 
-- **Batch Processing**: Efficiently handle large batches of data for processing.
-- **Lang Serve Client**: Interface for interacting with language model servers.
-- **Embedding & VDB**: Manage embeddings and vector databases.
-- **Meta Prompt Management**: Create and refine meta-prompts for language models.
-- **FAQ Summary Fix**: Tools for summarizing and fixing FAQs.
-- **System Configuration**: Comprehensive system management and configuration.
+- **Batch Processing**: Efficiently handle large batches of data with LLM.
+![Batch LLM](sceenshots/Seshat_Batch.png)
+![Batch LLM](sceenshots/Seshat_Batch_1.png)
+- **Lang Serve Client**: Interface for interacting with [LangServe](https://python.langchain.com/v0.2/docs/langserve/) applications.
+- **Embedding & VDB**: Embed strings/sheets, import embeddings to vector databases, and cluster embeddings.
+![Embedding](sceenshots/Seshat_Embedding.png)
+![Clustering](sceenshots/Seshat_Clustering.png)
+- **Meta Prompt Management**: Create prompts with LLM, based on [meta-prompt](https://github.com/yaleh/meta-prompt).
+[![Meta Prompt](https://img.youtube.com/vi/eNFUq2AjKCk/0.jpg)](https://www.youtube.com/watch?v=eNFUq2AjKCk)
+- **FAQ Summary Fix**: Preprocess FAQ data, convert Q&A sheets into `faq_text` and `rdb_text`. `faq_text` is used by VDB and LLM for inference, while `rdb_text` is used for output.
+- **System Configuration**: Comprehensive system management and configuration, including updating models of OpenRouter.
 
 ## Installation
 
@@ -107,8 +112,4 @@ We would like to thank the contributors and the open-source community for their 
 
 ## Contact
 
-For any questions or inquiries, please contact the project maintainer at [your-email@example.com].
-
----
-
-Feel free to customize and extend this README as per your project's requirements and additional details.
+For any questions or inquiries, please contact the project maintainer at [calvino.huang@gmail.com].
