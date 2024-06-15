@@ -50,6 +50,10 @@ class MetaPromptConfig(BaseConfig):
     class Config:
         extra = "allow"
 
+class BatchConfig(BaseConfig):
+    class Config:
+        extra = "allow"
+
 class ServerConfig(BaseConfig):
     message_db: str
     host: str
@@ -62,5 +66,6 @@ class ServerConfig(BaseConfig):
 class AppConfig(BaseConfig):
     llm: LLMConfig
     meta_prompt: MetaPromptConfig
+    batch: BatchConfig
     server: ServerConfig
     embedding: Optional[dict[str, EmbeddingConfig]]

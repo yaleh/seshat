@@ -41,7 +41,7 @@ class BatchUI:
                             with gr.Group():
                                 with gr.Row():
                                     self.updating_table_method = gr.Dropdown(
-                                        choices=["Markdown Table", "Chat History"],
+                                        choices=["Markdown Table", "Chat History", "History w/ Tables"],
                                         value="Markdown Table",
                                         show_label=False,
                                         allow_custom_value=False
@@ -471,7 +471,22 @@ class BatchUI:
                         kv_item[input_varivable] = row[input_varivable]
                     input_list.append(kv_item)
 
-                llmbot_res = chat_chain.batch(input_list)
+                try:
+                    llmbot_res = chat_chain.batch(input_list)
+                except Exception as e:
+                    # stop the batch process if self.config.batch has attr 'stop_on_error' and it is True
+                    if hasattr(self.config.batch, 'stop_on_error') and self.config.batch.stop_on_error:
+                        raise gr.Error(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
+                    gr.Warning(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
+
+                    # fallback to a loop of invoke()
+                    llmbot_res = [''] * len(input_list)
+                    for j in range(len(input_list)):
+                        try:
+                            llmbot_res[j] = chat_chain.invoke(input_list[j])
+                        except Exception as e:
+                            gr.Warning(f'send_batch_func-err:{e} at item {i+j}')
+                            llmbot_res[j] = ''
                 human_list = chat_prompt.batch(input_list)
                 human_list = [item.messages[1].content for item in human_list]
                 chat_history += list(zip(human_list, llmbot_res))
@@ -480,7 +495,12 @@ class BatchUI:
                         f"{len(selected_table)}")
                 progress((i+batch_len, len(table_refined)), desc="Processing...")
             except Exception as e:
-                raise gr.Error(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
+                # if e is an gr.Error, raise it directly
+                if isinstance(e, gr.Error):
+                    raise e
+                else:
+                    raise gr.Error(f'send_batch_func-err:{e} at batch {i} to {i+batch_len}')
+
         return gr.Chatbot(value=chat_history), table_output
 
     def cancel_batch_send(self):
@@ -509,6 +529,15 @@ class BatchUI:
         elif updating_table_method == "Chat History":
             try:
                 data = pd.DataFrame(chatbot, columns=["Input", "Output"])
+                with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_file:
+                    temp_filename = temp_file.name
+                    data.to_csv(temp_filename, index=False)
+                    return data, gr.File(value=temp_filename, visible=True)
+            except Exception as e:
+                raise gr.Error(f"save_dataframe-err:{e}")
+        elif updating_table_method == "History w/ Tables":
+            try:
+                data = TableParser.parse_markdown_table_history(chatbot)
                 with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_file:
                     temp_filename = temp_file.name
                     data.to_csv(temp_filename, index=False)

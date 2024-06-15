@@ -13,7 +13,11 @@ class TableParser:
                 if line.strip().startswith("|---"):
                     continue
                 row = line.strip("| ").split(" | ")
-                table_data.append(row)
+                try:
+                    table_data.append(row)
+                except ValueError:
+                    # skip invalid row
+                    continue
             df = pd.DataFrame(table_data, columns=header_line)
         return df
 
@@ -22,3 +26,37 @@ class TableParser:
         if 'Skip' not in df.columns:
             df.insert(0, 'Skip', '')
         return df
+    
+    @staticmethod
+    def parse_markdown_table_history(history):
+        # history: list[list[str | tuple[str] | tuple[str | Path, str] | None]] | Callable | None
+        df = None
+
+        # parse items of history
+        for item in history:
+            item_df = TableParser.parse_markdown_table(item[-1])
+            if item_df is None:
+                continue
+            if df is None:
+                df = item_df
+            else:
+                # merge the columns of df and item_df
+                # then append item_df to df
+
+                # add the columns of item_df that are not in df
+                for col in item_df.columns:
+                    if col not in df.columns:
+                        df[col] = ''
+                # add the columns of df that are not in item_df
+                for col in df.columns:
+                    if col not in item_df.columns:
+                        item_df[col] = ''
+                # reorder the columns of item_df to match df
+                item_df = item_df[df.columns]
+                # append item_df to df
+                df = pd.concat([df, item_df], ignore_index=True)
+
+        return df
+
+
+
