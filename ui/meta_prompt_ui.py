@@ -668,12 +668,22 @@ class MetaPromptUI:
     def update_enable_other_user_prompts(self, new_value):
         self.enable_other_user_prompts = new_value
         return (
-            gr.Textbox.update(visible=new_value),
-            gr.Textbox.update(
-                value=self.config.meta_prompt.meta_system_prompt_with_other_prompts
-                if new_value
-                else self.config.meta_prompt.meta_system_prompt
-            )
+            gr.Textbox(
+                label="Other User Prompts",
+                lines=10,
+                interactive=True,
+                placeholder="Wrap each prompt with a pair of '```'.",
+                visible=new_value,
+                show_copy_button=True
+            ),
+            gr.Textbox(label="Meta System Prompt",
+                       value=self.config.meta_prompt.meta_system_prompt_with_other_prompts
+                       if new_value
+                       else self.config.meta_prompt.meta_system_prompt,
+                       lines=10,
+                       interactive=True,
+                       show_copy_button=True
+                       )
         )
 
     def compare_strings(self, alpha: str, beta: str, expected: str) -> str:

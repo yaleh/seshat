@@ -452,24 +452,19 @@ class EmbeddingUI:
     def reload_vdb_settings(self):
         return (
             gr.update(
-                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_HOSTS_TABLE) or None,
-                interactive=True
+                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_HOSTS_TABLE) or None
             ),
             gr.update(
-                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_API_KEYS_TABLE) or None,
-                interactive=True
+                choices=self.db_manager.get_messages(EMBEDDING_PINECONE_API_KEYS_TABLE) or None
             ),
             gr.update(
-                value=self.db_manager.get_messages(EMBEDDING_MILVUS_URIS_TABLE) or None,
-                interactive=True
+                choices=self.db_manager.get_messages(EMBEDDING_MILVUS_URIS_TABLE) or None
             ),
             gr.update(
-                value=self.db_manager.get_messages(EMBEDDING_MILVUS_TOKENS_TABLE) or None,
-                interactive=True
+                choices=self.db_manager.get_messages(EMBEDDING_MILVUS_TOKENS_TABLE) or None
             ),
             gr.update(
-                value=self.db_manager.get_messages(EMBEDDING_MILVUS_COLLECTIONS_TABLE) or None,
-                interactive=True
+                choices=self.db_manager.get_messages(EMBEDDING_MILVUS_COLLECTIONS_TABLE) or None
             )
         )
 
