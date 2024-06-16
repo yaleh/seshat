@@ -13,12 +13,23 @@ class TableParser:
                 if line.strip().startswith("|---"):
                     continue
                 row = line.strip("| ").split(" | ")
+
+                # fix row if the number of columns doesn't match the header
+                if len(row) < len(header_line):
+                    row += [''] * (len(header_line) - len(row))
+                elif len(row) > len(header_line):
+                    row = row[:len(header_line)]
+                    
                 try:
                     table_data.append(row)
                 except ValueError:
                     # skip invalid row
                     continue
-            df = pd.DataFrame(table_data, columns=header_line)
+            try:
+                df = pd.DataFrame(table_data, columns=header_line)
+            except ValueError:
+                # skip invalid table
+                pass
         return df
 
     @staticmethod
