@@ -490,7 +490,9 @@ class BatchUI:
                 human_list = chat_prompt.batch(input_list)
                 human_list = [item.messages[1].content for item in human_list]
                 chat_history += list(zip(human_list, llmbot_res))
-                table_output.iloc[i:i+batch_len,table_output.shape[-1]-1]=llmbot_res
+                # table_output.iloc[i:i+batch_len,table_output.shape[-1]-1]=llmbot_res
+                target_series = table_output.iloc[i:i+batch_len,table_output.shape[-1]-1].astype(object)
+                target_series.update(pd.Series(llmbot_res))
                 gr.Info(f"当前已完成/总条数：{i+batch_len if (i+batch_len) < len(selected_table) else len(selected_table)}/"
                         f"{len(selected_table)}")
                 progress((i+batch_len, len(table_refined)), desc="Processing...")
