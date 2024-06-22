@@ -2,6 +2,7 @@ import gradio as gr
 import os
 import signal
 import requests
+from openai import OpenAI
 from pydantic_yaml import to_yaml_file
 
 class SystemUI:
@@ -16,9 +17,14 @@ class SystemUI:
             # * Update Cloudflare models
 
             # a button to exit the process
+            self.refresh_opani_button = gr.Button("Refresh Opani", variant="secondary")
             self.refresh_openrouter_button = gr.Button("Refresh OpenRouter", variant="secondary")
             self.save_configurations_button = gr.Button("Save Configurations", variant="secondary")
             self.exit_button = gr.Button("Exit", variant="stop")
+
+            self.refresh_opani_button.click(
+                self.refresh_openai_services, [], []
+            )
         
             self.refresh_openrouter_button.click(
                 self.refresh_openrouter_services, [], []
@@ -36,6 +42,19 @@ class SystemUI:
     
     def stop_server(self):
         os.kill(os.getpid(), signal.SIGTERM)
+
+    def refresh_openai_services(self):
+        # update self.config.llm.llm_services['OpenAI'].models from OpenAI API
+        openai = OpenAI(api_key=self.config.llm.llm_services['OpenAI'].args.openai_api_key)
+        models = openai.models.list()
+        openai_models = []
+        for model in models:
+            # keep models started with `gpt-` only
+            if model.id.startswith('gpt-'):
+                openai_models.append(model.id)
+        self.config.llm.llm_services['OpenAI'].models = openai_models
+
+        gr.Info("OpenAI services refreshed")
     
     def refresh_openrouter_services(self):
         # update self.config.llm.llm_services['OpenRouter'].models from https://openrouter.ai/api/v1/models
