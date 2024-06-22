@@ -17,12 +17,12 @@ class SystemUI:
             # * Update Cloudflare models
 
             # a button to exit the process
-            self.refresh_opani_button = gr.Button("Refresh Opani", variant="secondary")
+            self.refresh_openai_button = gr.Button("Refresh OpenAI", variant="secondary")
             self.refresh_openrouter_button = gr.Button("Refresh OpenRouter", variant="secondary")
             self.save_configurations_button = gr.Button("Save Configurations", variant="secondary")
             self.exit_button = gr.Button("Exit", variant="stop")
 
-            self.refresh_opani_button.click(
+            self.refresh_openai_button.click(
                 self.refresh_openai_services, [], []
             )
         
