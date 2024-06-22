@@ -7,12 +7,17 @@ class TableParser:
         table_start_idx = md_content.find("| ")
         if table_start_idx >= 0:
             lines = md_content[table_start_idx:].split("\n")
-            header_line = lines.pop(0).strip("| ").split(" | ")
+            # header_line = lines.pop(0).strip("| ").split(" | ")
+            header_line = lines.pop(0).split("|")
+            header_line = [cell.strip() for cell in header_line[1:-1]]
             table_data = []
             for line in lines:
-                if line.strip().startswith("|---"):
+                if line.strip().startswith("|---") or line.strip().startswith("| ---"):
                     continue
-                row = line.strip("| ").split(" | ")
+
+                # split line by "|", notice there might be empty cells like `| |`
+                row = line.split("|")
+                row = [cell.strip() for cell in row[1:-1]]
 
                 # fix row if the number of columns doesn't match the header
                 if len(row) < len(header_line):

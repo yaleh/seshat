@@ -1063,6 +1063,14 @@ qa = ["flake8 (==5.0.4)", "mypy (==0.971)", "types-setuptools (==67.2.0.1)"]
 testing = ["django", "attrs", "colorama", "docopt", "pytest (<7.0.0)"]
 
 [[package]]
+name = "jieba"
+version = "0.42.1"
+description = "Chinese Words Segmentation Utilities"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "jinja2"
 version = "3.1.3"
 description = "A very fast and expressive template engine."
@@ -2696,7 +2704,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-ena
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "71c61f47d2290b91816680a0c94e48a8f087e142e967d643617fd6c6709802e4"
+content-hash = "0c92726c6597d5bc234c8c447cb342737d48b3b7cf1964dd3dcdf6b9f06d760d"
 
 [metadata.files]
 aiofiles = []
@@ -2772,6 +2780,7 @@ ipykernel = []
 ipython = []
 isodate = []
 jedi = []
+jieba = []
 jinja2 = []
 joblib = []
 jsonpatch = []
