@@ -14,13 +14,13 @@ from ui import (
 )
 
 class ChatbotApp:
-    def __init__(self, config=None):
+    def __init__(self, config=None, config_file_path=None):
         self.batch_ui = BatchUI(config)
         self.embedding_ui = EmbeddingUI(config)
         self.meta_ui = MetaPromptUI(config)
         self.langserve_client_ui = LangServeClientUI(config)
         self.faq_summary_fix_ui = FAQSummaryFixUI(config)
-        self.system_ui = SystemUI(config)
+        self.system_ui = SystemUI(config, config_file_path)
 
         self.ui = gr.TabbedInterface(
             interface_list=[
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     ]
     app_config = AppConfig(config_sources=config_sources)
 
-    app = ChatbotApp(app_config)
+    app = ChatbotApp(app_config, args.config_file)
     app.ui.queue().launch(
         share=app_config.server.share,
         server_name=app_config.server.host,
