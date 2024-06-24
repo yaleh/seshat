@@ -371,7 +371,7 @@ class EmbeddingUI:
                     self.clusters, self.cluster_label_base,
                     self.batch_start, self.batch_end
                 ],
-                [self.input_dataframe]
+                [self.input_dataframe, self.file_table]
             )
 
             self.add_index_column_btn.click(
@@ -564,7 +564,11 @@ class EmbeddingUI:
         embedded_vectors = []
         for i in range(0, len(key_column), batch_size):
             batch_keys = key_column[i:i+batch_size]
-            batch_vectors = model.embed_documents(batch_keys.tolist())
+            batch_list = batch_keys.tolist()
+            # model.embed_documents doesn't accept empty strings or None
+            # fill the empty strings with a space
+            batch_list = [key if key != "" else " " for key in batch_list]
+            batch_vectors = model.embed_documents(batch_list)
             embedded_vectors.extend(batch_vectors)
 
         # create a new dataframe with the embedded_vectors (string) as the firt column named `Vector`
@@ -766,21 +770,21 @@ class EmbeddingUI:
         # raise an error if input_dataframe or embeddings_file is empty
         if input_dataframe.shape[0]<=1 or embeddings_file is None:
             gr.Warning("Input dataframe or embeddings file is empty")
-            # return input_dataframe, None
-            return input_dataframe
+            return input_dataframe, None
+            # return input_dataframe
 
         data = np.load(embeddings_file)
 
         if len(data) < clusters:
             gr.Warning("The number of clusters should be less than the number of data points")
-            # return input_dataframe, None
-            return input_dataframe
+            return input_dataframe, None
+            # return input_dataframe
 
         # validate data length vs start&end
         if len(data) != end - start:
             gr.Warning("The number of vectors and data points should be the same")
-            # return input_dataframe, None
-            return input_dataframe
+            return input_dataframe, None
+            # return input_dataframe
 
         try:
             # Apply Spectral Clustering
@@ -799,13 +803,13 @@ class EmbeddingUI:
             # overwrite the rows (specified by start and end) of cluster output field if it exists
             input_dataframe.loc[start:end-1, cluster_output_field] = spectral_clustering.labels_
 
-            # temp_filename = tempfile.NamedTemporaryFile(suffix=".csv", delete=False).name
-            # input_dataframe.to_csv(temp_filename, index=False)
+            temp_filename = tempfile.NamedTemporaryFile(suffix=".csv", delete=False).name
+            input_dataframe.to_csv(temp_filename, index=False)
 
             gr.Info(f"Data clustered successfully into {clusters} clusters")
 
-            # return input_dataframe, temp_filename
-            return input_dataframe
+            return input_dataframe, temp_filename
+            # return input_dataframe
         except Exception as e:
             raise gr.Error(f"Error: {e}")
 
