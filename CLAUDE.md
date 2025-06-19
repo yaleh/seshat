@@ -4,30 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Development
+### Environment Setup
 ```bash
+# Ensure correct Python version (requires 3.10-3.12)
+pyenv local 3.10.18
+
+# Configure Poetry to use correct Python version
+poetry env use $(which python3.10)
+
 # Install dependencies
 poetry install
+```
 
+### Development
+```bash
 # Run application
-python seshat.py
-# or with custom config
-python seshat.py --config_file path/to/config.yaml
-
-# Run via Poetry
 poetry run python seshat.py
+# or with custom config
+poetry run python seshat.py --config_file path/to/config.yaml
 ```
 
 ### Testing
 ```bash
-# Run all tests
-python -m unittest discover test/
+# Run all tests individually
+poetry run python test/table_parser_test.py
+poetry run python test/test_config_loader.py
+poetry run python test/test_lcel.py
+poetry run python test/test_db_sqlite3.py
 
-# Run specific test
-python test/table_parser_test.py
+# Run with coverage
+poetry run coverage run test/table_parser_test.py
+poetry run coverage run -a test/test_config_loader.py
+poetry run coverage run -a test/test_lcel.py
+poetry run coverage run -a test/test_db_sqlite3.py
 
-# With Poetry
-poetry run python -m unittest test.table_parser_test
+# Generate coverage reports
+poetry run coverage report          # Terminal report
+poetry run coverage html            # HTML report in htmlcov/
 ```
 
 ### Docker
@@ -81,9 +94,14 @@ Uses **Pydantic** models for type-safe configuration management:
 - Vector embedding and clustering workflows
 
 ## Key Technologies
-- **Python 3.10-3.12** with **Poetry** dependency management
+- **Python 3.10-3.12** with **Poetry** dependency management and **pyenv** for version management
 - **Gradio 4.26.0** for web UI
 - **LangChain ecosystem** for LLM integration
 - **Pydantic** for configuration validation
 - **SQLite** for message persistence
 - **Docker** for containerization
+
+## Important Notes
+- **Python Version**: Project requires Python 3.10-3.12. Use `pyenv local 3.10.18` to set the correct version.
+- **Poetry Environment**: Always configure Poetry to use the correct Python version with `poetry env use $(which python3.10)` before installing dependencies.
+- **Testing**: The project uses Python's built-in `unittest` framework. Run tests via Poetry to ensure correct environment.
