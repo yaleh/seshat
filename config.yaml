@@ -1,3 +1,5 @@
+batch: {}
+
 embedding:
   text-embedding-3-small:
     type: OpenAIEmbeddings
