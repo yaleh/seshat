@@ -288,6 +288,244 @@ class TestBaseChatbot(unittest.TestCase):
         mock_loop.close.assert_called_once()
 
 
+    @patch('components.chatbot.PromptCreator')
+    @patch('components.chatbot.time')
+    @patch('components.chatbot.logging')
+    def test_batch_send(self, mock_logging, mock_time, mock_prompt_creator):
+        """Test batch_send method"""
+        # Setup mocks
+        mock_time.time.side_effect = [300.0, 303.0]  # start and end times
+        
+        mock_prompts = [MagicMock(), MagicMock()]
+        mock_prompts[0].messages = "prompt1_messages"
+        mock_prompts[1].messages = "prompt2_messages"
+        mock_prompt_creator.create_table_prompts.return_value = mock_prompts
+        
+        mock_batch_result = ["batch_response1", "batch_response2"]
+        self.chatbot.chat_llm.batch = MagicMock(return_value=mock_batch_result)
+        
+        # Test data
+        system_prompt = "Process this data"
+        user_prompt = "Analyze: {data}"
+        table = [{"data": "row1"}, {"data": "row2"}]
+        
+        result = self.chatbot.batch_send(system_prompt, user_prompt, table)
+        
+        # Verify prompt creation
+        mock_prompt_creator.create_table_prompts.assert_called_once_with(
+            system_prompt, user_prompt, table
+        )
+        
+        # Verify batch call
+        self.chatbot.chat_llm.batch.assert_called_once_with(
+            ["prompt1_messages", "prompt2_messages"]
+        )
+        
+        # Verify result
+        self.assertEqual(result[0], mock_batch_result)
+        self.assertEqual(result[1], mock_prompts)
+        
+        # Verify logging
+        mock_logging.info.assert_called_once()
+
+
+class TestOpenAIChatbot(unittest.TestCase):
+    
+    @patch('components.chatbot.ChatOpenAI')
+    @patch('components.chatbot.ConversationChain')
+    @patch('components.chatbot.ConversationBufferMemory')
+    def test_openai_chatbot_init(self, mock_memory, mock_conversation, mock_chat_openai):
+        """Test OpenAIChatbot initialization"""
+        mock_chat_instance = MagicMock()
+        mock_chat_openai.return_value = mock_chat_instance
+        mock_memory_instance = MagicMock()
+        mock_memory.return_value = mock_memory_instance
+        mock_conversation_instance = MagicMock()
+        mock_conversation.return_value = mock_conversation_instance
+        
+        llm_config = {
+            'openai_api_base': 'https://api.openai.com/v1',
+            'openai_api_key': 'test-key'
+        }
+        
+        from components.chatbot import OpenAIChatbot
+        chatbot = OpenAIChatbot(
+            model_name='gpt-4',
+            tempreature=0.8,
+            max_retries=5,
+            request_timeout=120,
+            max_tokens=2000,
+            **llm_config
+        )
+        
+        # Verify ChatOpenAI was called correctly
+        mock_chat_openai.assert_called_once_with(
+            model_name='gpt-4',
+            openai_api_base='https://api.openai.com/v1',
+            openai_api_key='test-key',
+            temperature=0.8,
+            max_retries=5,
+            request_timeout=120,
+            max_tokens=2000,
+            verbose=True
+        )
+        
+        # Verify memory and conversation setup
+        mock_memory.assert_called_once()
+        mock_conversation.assert_called_once_with(
+            llm=mock_chat_instance,
+            verbose=True,
+            memory=mock_memory_instance
+        )
+    
+    @patch('components.chatbot.ChatOpenAI')
+    @patch('components.chatbot.ConversationChain')
+    @patch('components.chatbot.ConversationBufferMemory')
+    def test_openai_chatbot_init_none_max_tokens(self, mock_memory, mock_conversation, mock_chat_openai):
+        """Test OpenAIChatbot initialization with max_tokens='None'"""
+        llm_config = {
+            'openai_api_base': 'https://api.openai.com/v1',
+            'openai_api_key': 'test-key'
+        }
+        
+        from components.chatbot import OpenAIChatbot
+        chatbot = OpenAIChatbot(max_tokens='None', **llm_config)
+        
+        # Verify max_tokens was converted to None
+        call_args = mock_chat_openai.call_args[1]
+        self.assertIsNone(call_args['max_tokens'])
+    
+    @patch('components.chatbot.ChatOpenAI')
+    @patch('components.chatbot.ConversationChain')
+    @patch('components.chatbot.ConversationBufferMemory')
+    def test_openai_chatbot_conversation_method(self, mock_memory, mock_conversation, mock_chat_openai):
+        """Test OpenAIChatbot conversaction method"""
+        # Setup mocks
+        mock_memory_instance = MagicMock()
+        mock_memory.return_value = mock_memory_instance
+        mock_memory_instance.load_memory_variables.return_value = {'history': 'line1\nline2\nline3'}
+        
+        mock_conversation_instance = MagicMock()
+        mock_conversation.return_value = mock_conversation_instance
+        mock_conversation_instance.return_value = "AI response"
+        
+        llm_config = {
+            'openai_api_base': 'https://api.openai.com/v1',
+            'openai_api_key': 'test-key'
+        }
+        
+        from components.chatbot import OpenAIChatbot
+        chatbot = OpenAIChatbot(**llm_config)
+        
+        # Test the conversation method
+        result = chatbot.conversaction("test input")
+        
+        # Verify memory loading and conversation call
+        mock_memory_instance.load_memory_variables.assert_called_once_with({})
+        mock_conversation_instance.assert_called_once_with("test input")
+
+
+class TestAzureOpenAIChatbot(unittest.TestCase):
+    
+    @patch('components.chatbot.AzureChatOpenAI')
+    def test_azure_openai_chatbot_init(self, mock_azure_chat):
+        """Test AzureOpenAIChatbot initialization"""
+        mock_chat_instance = MagicMock()
+        mock_azure_chat.return_value = mock_chat_instance
+        
+        llm_config = {
+            'openai_api_type': 'azure',
+            'openai_api_version': '2023-05-15',
+            'openai_api_base': 'https://test.openai.azure.com/',
+            'openai_api_key': 'test-key'
+        }
+        
+        from components.chatbot import AzureOpenAIChatbot
+        chatbot = AzureOpenAIChatbot(
+            model_name='gpt-35-turbo',
+            tempreature=0.7,
+            max_retries=3,
+            request_timeout=60,
+            max_tokens=1500,
+            **llm_config
+        )
+        
+        # Verify AzureChatOpenAI was called correctly
+        mock_azure_chat.assert_called_once_with(
+            deployment_name='gpt-35-turbo',
+            openai_api_type='azure',
+            openai_api_version='2023-05-15',
+            openai_api_base='https://test.openai.azure.com/',
+            openai_api_key='test-key',
+            temperature=0.7,
+            max_retries=3,
+            request_timeout=60,
+            max_tokens=1500,
+            verbose=True
+        )
+
+
+class TestReplicateChatbot(unittest.TestCase):
+    
+    @patch('components.chatbot.Replicate')
+    def test_replicate_chatbot_init(self, mock_replicate):
+        """Test ReplicateChatbot initialization"""
+        mock_replicate_instance = MagicMock()
+        mock_replicate.return_value = mock_replicate_instance
+        
+        llm_config = {
+            'REPLICATE_API_TOKEN': 'test-token'
+        }
+        
+        from components.chatbot import ReplicateChatbot
+        chatbot = ReplicateChatbot(
+            model_name='custom-model',
+            tempreature=0.9,
+            max_tokens=1000,
+            **llm_config
+        )
+        
+        # Verify environment variable was set
+        self.assertEqual(os.environ.get('REPLICATE_API_TOKEN'), 'test-token')
+        
+        # Verify Replicate was called correctly
+        mock_replicate.assert_called_once_with(
+            model='custom-model',
+            model_kwargs={
+                "temperature": 0.9,
+                "max_length": 1000,
+                "top_p": 1
+            }
+        )
+    
+    @patch('components.chatbot.Replicate')
+    def test_replicate_chatbot_call_method(self, mock_replicate):
+        """Test ReplicateChatbot __call__ method"""
+        mock_replicate_instance = MagicMock()
+        mock_replicate_instance.return_value = "replicate response"
+        mock_replicate.return_value = mock_replicate_instance
+        
+        llm_config = {'REPLICATE_API_TOKEN': 'test-token'}
+        
+        from components.chatbot import ReplicateChatbot
+        chatbot = ReplicateChatbot(**llm_config)
+        
+        # Test the __call__ method
+        result = chatbot(
+            messages="test message",
+            stop=["stop"],
+            callbacks=["callback"],
+            extra_param="test"
+        )
+        
+        # Verify the call was forwarded correctly
+        mock_replicate_instance.assert_called_once_with(
+            prompt="test message",
+            stop=["stop"],
+            extra_param="test"
+        )
+
+
 class TestChatbotIntegration(unittest.TestCase):
     
     @patch('components.chatbot.PromptCreator')
