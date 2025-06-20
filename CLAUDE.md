@@ -27,20 +27,30 @@ poetry run python seshat.py --config_file path/to/config.yaml
 ### Testing
 ```bash
 # Run all tests individually
-poetry run python test/table_parser_test.py
-poetry run python test/test_config_loader.py
-poetry run python test/test_lcel.py
-poetry run python test/test_db_sqlite3.py
+poetry run python test/table_parser_test.py      # Table parsing (9 tests)
+poetry run python test/test_config_loader.py     # Configuration (18 tests) 
+poetry run python test/test_lcel.py              # LLM integration (12 tests)
+poetry run python test/test_db_sqlite3.py        # Database (14 tests)
+poetry run python test/test_utils.py             # Utilities (8 tests)
+poetry run python test/test_dataframe_io.py      # DataFrame I/O (13 tests)
+poetry run python test/test_chatbot.py           # Chatbot (13 tests)
 
-# Run with coverage
+# Run all tests with coverage
 poetry run coverage run test/table_parser_test.py
 poetry run coverage run -a test/test_config_loader.py
 poetry run coverage run -a test/test_lcel.py
 poetry run coverage run -a test/test_db_sqlite3.py
+poetry run coverage run -a test/test_utils.py
+poetry run coverage run -a test/test_dataframe_io.py
+poetry run coverage run -a test/test_chatbot.py
 
 # Generate coverage reports
 poetry run coverage report          # Terminal report
 poetry run coverage html            # HTML report in htmlcov/
+
+# Current coverage: 19.07% overall
+# Modules with 100% coverage: config_loader, lcel, db_sqlite3, utils, dataframe_io
+# High coverage: chatbot (75.79%), table_parser (92.31%)
 ```
 
 ### Docker
