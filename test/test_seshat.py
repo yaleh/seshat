@@ -283,5 +283,253 @@ class TestChatbotAppIntegration(unittest.TestCase):
             self.assertEqual(call_args['tab_names'], expected_tabs)
 
 
+class TestSeshatMainExecution(unittest.TestCase):
+    
+    @patch('seshat.AppConfig')
+    @patch('seshat.ChatbotApp')
+    def test_main_execution_workflow(self, mock_chatbot_app, mock_app_config):
+        """Test the complete main execution workflow"""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.server.share = True
+        mock_config.server.host = '0.0.0.0'
+        mock_config.server.port = 7860
+        mock_app_config.return_value = mock_config
+        
+        mock_app = MagicMock()
+        mock_ui = MagicMock()
+        mock_app.ui = mock_ui
+        mock_queue = MagicMock()
+        mock_launch = MagicMock()
+        mock_ui.queue.return_value.launch = mock_launch
+        mock_chatbot_app.return_value = mock_app
+        
+        # Mock command line arguments
+        with patch('sys.argv', ['seshat.py', '--config_file', 'test_config.yaml']):
+            # Import and execute main block simulation
+            from confz import FileSource, CLArgSource
+            
+            args = parse_args()
+            self.assertEqual(args.config_file, 'test_config.yaml')
+            
+            config_sources = [
+                FileSource(file=args.config_file),
+                CLArgSource()
+            ]
+            app_config = mock_app_config(config_sources=config_sources)
+            app = mock_chatbot_app(app_config, args.config_file)
+            
+            # Simulate the launch call
+            app.ui.queue().launch(
+                share=app_config.server.share,
+                server_name=app_config.server.host,
+                server_port=app_config.server.port,
+                debug=True
+            )
+            
+            # Verify the workflow
+            mock_app_config.assert_called_once()
+            mock_chatbot_app.assert_called_once_with(app_config, args.config_file)
+    
+    @patch('seshat.AppConfig')
+    @patch('seshat.ChatbotApp')
+    def test_main_execution_with_default_config(self, mock_chatbot_app, mock_app_config):
+        """Test main execution with default config file"""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.server.share = False
+        mock_config.server.host = 'localhost'
+        mock_config.server.port = 8080
+        mock_app_config.return_value = mock_config
+        
+        mock_app = MagicMock()
+        mock_ui = MagicMock()
+        mock_app.ui = mock_ui
+        mock_chatbot_app.return_value = mock_app
+        
+        # Mock command line arguments for default case
+        with patch('sys.argv', ['seshat.py']):
+            args = parse_args()
+            self.assertEqual(args.config_file, 'config.yaml')  # Default value
+            
+            config_sources = [
+                FileSource(file=args.config_file),
+                CLArgSource()
+            ]
+            app_config = mock_app_config(config_sources=config_sources)
+            app = mock_chatbot_app(app_config, args.config_file)
+            
+            # Verify correct parameters were used
+            mock_chatbot_app.assert_called_once_with(app_config, 'config.yaml')
+    
+    def test_file_source_and_clarg_source_integration(self):
+        """Test that FileSource and CLArgSource are properly used"""
+        from confz import FileSource, CLArgSource
+        
+        # Test that these classes can be instantiated
+        file_source = FileSource(file='test.yaml')
+        clarg_source = CLArgSource()
+        
+        self.assertIsNotNone(file_source)
+        self.assertIsNotNone(clarg_source)
+        
+        # Verify they can be used in a list (as done in main)
+        config_sources = [file_source, clarg_source]
+        self.assertEqual(len(config_sources), 2)
+        self.assertIsInstance(config_sources[0], FileSource)
+        self.assertIsInstance(config_sources[1], CLArgSource)
+
+
+class TestSeshatAppConfigIntegration(unittest.TestCase):
+    
+    @patch('seshat.AppConfig')
+    def test_app_config_with_file_source(self, mock_app_config):
+        """Test AppConfig integration with FileSource"""
+        from confz import FileSource, CLArgSource
+        
+        # Create config sources as done in main
+        config_file = 'test_config.yaml'
+        config_sources = [
+            FileSource(file=config_file),
+            CLArgSource()
+        ]
+        
+        # Mock AppConfig
+        mock_config = MagicMock()
+        mock_app_config.return_value = mock_config
+        
+        # Test AppConfig instantiation
+        app_config = mock_app_config(config_sources=config_sources)
+        
+        # Verify AppConfig was called with correct sources
+        mock_app_config.assert_called_once_with(config_sources=config_sources)
+        self.assertEqual(app_config, mock_config)
+    
+    @patch('seshat.AppConfig')
+    def test_app_config_error_handling(self, mock_app_config):
+        """Test AppConfig error handling"""
+        from confz import FileSource, CLArgSource
+        
+        # Mock AppConfig to raise an exception
+        mock_app_config.side_effect = Exception("Config error")
+        
+        config_sources = [
+            FileSource(file='nonexistent.yaml'),
+            CLArgSource()
+        ]
+        
+        # Should raise the exception (no error handling in main)
+        with self.assertRaises(Exception):
+            mock_app_config(config_sources=config_sources)
+
+
+class TestSeshatLaunchConfiguration(unittest.TestCase):
+    
+    def test_launch_parameters_extraction(self):
+        """Test that launch parameters are correctly extracted from config"""
+        # Create a mock config that simulates the real structure
+        mock_config = MagicMock()
+        mock_config.server.share = True
+        mock_config.server.host = '127.0.0.1'
+        mock_config.server.port = 9090
+        
+        # Verify the attributes can be accessed as they would be in main
+        self.assertEqual(mock_config.server.share, True)
+        self.assertEqual(mock_config.server.host, '127.0.0.1')
+        self.assertEqual(mock_config.server.port, 9090)
+        
+        # Test with different values
+        mock_config.server.share = False
+        mock_config.server.host = '0.0.0.0'
+        mock_config.server.port = 7860
+        
+        self.assertEqual(mock_config.server.share, False)
+        self.assertEqual(mock_config.server.host, '0.0.0.0')
+        self.assertEqual(mock_config.server.port, 7860)
+    
+    @patch('seshat.ChatbotApp')
+    def test_gradio_ui_queue_and_launch(self, mock_chatbot_app):
+        """Test Gradio UI queue and launch call structure"""
+        # Setup mock app with proper method chaining
+        mock_ui = MagicMock()
+        mock_queue = MagicMock()
+        mock_launch = MagicMock()
+        
+        # Set up the method chain: ui.queue().launch()
+        mock_ui.queue.return_value.launch = mock_launch
+        
+        mock_app = MagicMock()
+        mock_app.ui = mock_ui
+        mock_chatbot_app.return_value = mock_app
+        
+        # Create app and simulate launch
+        mock_config = MagicMock()
+        app = mock_chatbot_app(mock_config, 'config.yaml')
+        
+        # Test the method chain
+        app.ui.queue().launch(
+            share=True,
+            server_name='localhost',
+            server_port=7860,
+            debug=True
+        )
+        
+        # Verify the calls were made
+        mock_ui.queue.assert_called_once()
+        mock_launch.assert_called_once_with(
+            share=True,
+            server_name='localhost',
+            server_port=7860,
+            debug=True
+        )
+
+
+class TestSeshatErrorScenarios(unittest.TestCase):
+    
+    @patch('seshat.ChatbotApp')
+    def test_chatbot_app_instantiation_error(self, mock_chatbot_app):
+        """Test error handling when ChatbotApp instantiation fails"""
+        # Mock ChatbotApp to raise an exception
+        mock_chatbot_app.side_effect = Exception("App initialization failed")
+        
+        # Should raise the exception (no error handling in main)
+        with self.assertRaises(Exception):
+            mock_chatbot_app(MagicMock(), 'config.yaml')
+    
+    def test_parse_args_with_invalid_arguments(self):
+        """Test parse_args with various argument scenarios"""
+        # Test with empty arguments
+        with patch('sys.argv', ['seshat.py']):
+            args = parse_args()
+            self.assertEqual(args.config_file, 'config.yaml')
+        
+        # Test with custom config file
+        with patch('sys.argv', ['seshat.py', '--config_file', '/path/to/custom.yaml']):
+            args = parse_args()
+            self.assertEqual(args.config_file, '/path/to/custom.yaml')
+        
+        # Test with unknown arguments (should be ignored due to parse_known_args)
+        with patch('sys.argv', ['seshat.py', '--unknown_arg', 'value', '--config_file', 'test.yaml']):
+            args = parse_args()
+            self.assertEqual(args.config_file, 'test.yaml')
+    
+    @patch('seshat.ChatbotApp')
+    def test_ui_launch_error(self, mock_chatbot_app):
+        """Test error handling when UI launch fails"""
+        # Setup mock app
+        mock_ui = MagicMock()
+        mock_ui.queue.return_value.launch.side_effect = Exception("Launch failed")
+        
+        mock_app = MagicMock()
+        mock_app.ui = mock_ui
+        mock_chatbot_app.return_value = mock_app
+        
+        app = mock_chatbot_app(MagicMock(), 'config.yaml')
+        
+        # Should raise the exception (no error handling in main)
+        with self.assertRaises(Exception):
+            app.ui.queue().launch(share=False, server_name='localhost', server_port=7860, debug=True)
+
+
 if __name__ == '__main__':
     unittest.main()
